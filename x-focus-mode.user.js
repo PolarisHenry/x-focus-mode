@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.4
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净毛玻璃悬浮球(默认停靠在 S 左侧)、面板智能避让防重叠、默认媒体微模糊防窥、单键 J/K 顺滑翻页(J上一页/K下一页)、强力清剿币圈/Binance/合约垃圾推广。
+// @version      1.8.5
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、强力清剿政治暴论/口水战/币圈推广、商业与认知深度拆解专栏、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -43,6 +43,7 @@
     mediaBlur: true,   // 媒体防窥微模糊: 图片/视频默认微模糊遮罩,hover还原(默认开启)
     tabCloak: false,   // 标签页伪装: 将标题与图标伪装为 Google 文档
     blockCrypto: true, // 彻底屏蔽币圈推广: 无视 Binance/币安/炒币/合约/空投/代币引流
+    blockPolitics: true,// 彻底屏蔽政治暴论与口水战: 净化认知、键政、戾气发泄与恶毒谩骂
     topicFilter: false,// 时间线主题过滤: 仅显示科技/认知/搞钱相关推文
     progressBar: true, // 屏幕顶端极细阅读滚动进度条
     pureBlack: false,  // OLED 纯黑极简背景
@@ -52,12 +53,10 @@
   const WIDTHS = [600, 700, 800, 900, 1000, 1100, 1200];
 
   const stored = GM_getValue('fxState', {});
-  // v1.8.4 迁移: 保持纯净圆形悬浮球，重置默认位置到 S 左侧
-  if (!stored._v184_migrated) {
-    stored.ballPos = null; // 重置为新的默认位置 (S 左边)
-    stored.keepSearch = true;
-    stored.mediaBlur = true;
-    stored._v184_migrated = true;
+  // v1.8.5 迁移: 默认启用政治暴论与口水战屏蔽，重构认知与商业检索专栏
+  if (!stored._v185_migrated) {
+    stored.blockPolitics = true;
+    stored._v185_migrated = true;
     try { GM_setValue('fxState', stored); } catch (_) {}
   }
   const S = Object.assign({}, DEFAULTS, stored);
@@ -66,33 +65,45 @@
   const DOCS_FAVICON = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%234285F4" d="M30 4H12C9.8 4 8 5.8 8 8v32c0 2.2 1.8 4 4 4h24c2.2 0 4-1.8 4-4V16L30 4z"/><path fill="%23A1C2FA" d="M30 4v12h12L30 4z"/><path fill="%23FFF" d="M14 22h20v2.5H14zm0 6h20v2.5H14zm0 6h14v2.5H14z"/></svg>';
   const DOCS_TITLE = 'Google 文档 - 2026 Q4 业务架构与跨系统协同方案演进规划';
 
-  /* 强力屏蔽词 (排除币安 Binance、炒币、合约、空投引流等垃圾) */
+  /* 强力屏蔽词: 币圈 / 炒币 / 合约 / 交易所 / 空投引流 */
   const CRYPTO_EXCLUDES = '-Binance -币安 -BNB -OKX -欧易 -crypto -空投 -撸毛 -代币 -Token -合约 -做空 -做多 -土狗 -铭文 -符文 -以太坊 -比特币 -BTC -ETH -SOL -返佣 -爆仓 -打新 -airdrop';
 
-  /* ---------------- 精选干货专栏检索配置 (高赞提纯 + 坚决排除币圈与广告) ---------------- */
+  /* 强力屏蔽词: 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 (彻底过滤垃圾内容) */
+  const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -中国共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -大外宣 -配得上你的苦难 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
+
+  /* 强力屏蔽词: 灰产割韭菜 / 营销号引流 */
+  const SCAM_EXCLUDES = '-带徒弟 -私信我 -加微信 -日入 -月入十万';
+
+  /* 聚合清洗排除词 (全专栏生效) */
+  const NOISE_EXCLUDES = `${CRYPTO_EXCLUDES} ${POLITICS_AND_RANT_EXCLUDES} ${SCAM_EXCLUDES}`;
+
+  /* ---------------- 精选干货专栏检索配置 (高信噪比提纯 + 严拒政治与暴论) ---------------- */
   const CHANNELS = {
     all: {
-      name: '🔥 综合精选 (科技+认知+搞钱)',
-      q: `(AI OR 大模型 OR 独立开发 OR LLM OR Claude OR Cursor OR 开源 OR 认知 OR 商业思考 OR 底层逻辑 OR 思维模型 OR 复盘 OR 搞钱 OR 副业 OR 出海 OR 变现 OR 盈利 OR MRR) min_faves:35 lang:zh -is:retweet ${CRYPTO_EXCLUDES}`
+      name: '🔥 综合精选 (科技+商业+出海)',
+      q: `(AI OR 大模型 OR 独立开发 OR Cursor OR Claude OR "商业模式" OR "深度拆解" OR "出海" OR "MRR" OR "复盘" OR "方法论") min_faves:40 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     tech: {
       name: '🤖 科技 & 前沿 AI',
-      q: `(AI OR 大模型 OR 独立开发 OR LLM OR Claude OR Cursor OR "开源" OR "架构" OR "全栈") min_faves:30 lang:zh -is:retweet ${CRYPTO_EXCLUDES}`
+      q: `(AI OR 大模型 OR 独立开发 OR LLM OR Claude OR Cursor OR "开源项目" OR "全栈" OR "架构设计") min_faves:30 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     cognition: {
-      name: '💡 提升认知 & 商业思考',
-      q: `(认知 OR "商业思考" OR "个人成长" OR "底层逻辑" OR "思维模型" OR "经验总结" OR "复盘") min_faves:50 lang:zh -is:retweet ${CRYPTO_EXCLUDES}`
+      name: '💡 商业深度拆解 & 思维模型',
+      q: `("商业思考" OR "商业模式" OR "深度拆解" OR "思维模型" OR "决策模型" OR "复盘" OR "方法论" OR "增长策略" OR "读书笔记") min_faves:35 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     money: {
-      name: '💰 搞钱 & 出海变现',
-      q: `(搞钱 OR "副业" OR "出海" OR "独立开发" OR "变现" OR "盈利" OR "MRR" OR "冷启动") min_faves:25 lang:zh -is:retweet ${CRYPTO_EXCLUDES}`
+      name: '💰 搞钱 & 独立出海',
+      q: `("搞钱" OR "独立开发" OR "出海" OR "变现" OR "盈利" OR "MRR" OR "冷启动" OR "副业项目") min_faves:25 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     }
   };
 
-  const TOPIC_REGEX = /(AI|大模型|LLM|Claude|Cursor|GPT|开源|架构|编程|代码|算法|前端|后端|全栈|SaaS|认知|思维|底层逻辑|商业|思考|复盘|复利|经验总结|搞钱|副业|出海|变现|盈利|MRR|营收|独立开发|冷启动|产品经理|增长|科技)/i;
+  const TOPIC_REGEX = /(AI|大模型|LLM|Claude|Cursor|GPT|开源|架构|编程|代码|算法|前端|后端|全栈|SaaS|商业模式|思维模型|决策模型|复盘|复利|方法论|读书笔记|搞钱|副业|出海|变现|盈利|MRR|营收|独立开发|冷启动|产品经理|增长|科技)/i;
 
   /* 强力屏蔽币圈/赌博/交易所引流垃圾 (Binance/OKX/合约/代币/空投) */
   const CRYPTO_SPAM_REGEX = /(Binance|币安|BNB|OKX|欧易|Huobi|火币|Gate\.io|空投|撸毛|代币|Token|Memecoin|meme币|土狗|铭文|符文|合约|做多|做空|跟单|带单|爆仓|平仓|以太坊|比特币|\bBTC\b|\bETH\b|\bSOL\b|\bUSDT\b|web3|Web3|区块链|质押|挖矿|返佣|邀请码|百倍币|千倍币|airdrop)/i;
+
+  /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击 */
+  const POLITICS_SPAM_REGEX = /(中共|共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|大外宣)/i;
 
   /* ---------------- SVG 极简图标资产 ---------------- */
   const ICON_FOCUS = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>`;
@@ -770,16 +781,17 @@
     }
   }
 
-  /* ---------------- 时间线本地高能主题与币圈推广过滤 ---------------- */
+  /* ---------------- 时间线本地高能主题与垃圾过滤 (币圈/政治/暴论) ---------------- */
   function filterTimelineTweets() {
     const shouldBlockCrypto = S.focus && S.blockCrypto;
+    const shouldBlockPolitics = S.focus && S.blockPolitics;
     const shouldFilterTopic = S.focus && S.topicFilter;
 
     document.querySelectorAll('article[data-testid="tweet"]').forEach((el) => {
       const wrap = el.closest('div[data-testid="cellInnerDiv"]');
       if (!wrap) return;
 
-      if (!shouldBlockCrypto && !shouldFilterTopic) {
+      if (!shouldBlockCrypto && !shouldBlockPolitics && !shouldFilterTopic) {
         if (wrap.dataset.fxFiltered) {
           wrap.style.display = '';
           delete wrap.dataset.fxFiltered;
@@ -797,7 +809,14 @@
         return;
       }
 
-      // 2. 主题过滤 (仅当开启 topicFilter 时)
+      // 2. 政治口水战 / 键政暴论 / 情绪发泄与恶毒谩骂直接一票否决
+      if (shouldBlockPolitics && text && POLITICS_SPAM_REGEX.test(text)) {
+        wrap.style.display = 'none';
+        wrap.dataset.fxFiltered = 'politics';
+        return;
+      }
+
+      // 3. 主题过滤 (仅当开启 topicFilter 时)
       if (shouldFilterTopic) {
         if (text && !TOPIC_REGEX.test(text)) {
           wrap.style.display = 'none';
@@ -811,10 +830,10 @@
     });
   }
 
-  /* ---------------- 打开精选专栏检索流 ---------------- */
+  /* ---------------- 打开精选专栏检索流 (默认热门 Top 高信噪比) ---------------- */
   function openChannel(key) {
     const ch = CHANNELS[key] || CHANNELS.all;
-    const url = `/search?q=${encodeURIComponent(ch.q)}&f=live`;
+    const url = `/search?q=${encodeURIComponent(ch.q)}`;
     location.assign(url);
   }
 
@@ -980,9 +999,9 @@
       
       ${sec('精选干货专栏 (一键直达)')}
       <div class="fx-channel-grid">
-        <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+认知+搞钱)</button>
+        <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+商业+出海)</button>
         <button type="button" class="fx-channel-btn" data-channel="tech">🤖 科技 & AI</button>
-        <button type="button" class="fx-channel-btn" data-channel="cognition">💡 提升认知</button>
+        <button type="button" class="fx-channel-btn" data-channel="cognition">💡 商业深度拆解</button>
         <button type="button" class="fx-channel-btn" data-channel="money">💰 搞钱出海</button>
       </div>
 
@@ -1007,7 +1026,8 @@
 
       ${sec('摸鱼防护 & 内容过滤')}
       ${row('blockCrypto', '彻底屏蔽币圈推广', '无视Binance/合约/空投', false)}
-      ${row('topicFilter', '时间线主题过滤', '只看科技/认知/搞钱', dim)}
+      ${row('blockPolitics', '彻底屏蔽政治暴论', '无视键政/吵架/戾气', false)}
+      ${row('topicFilter', '时间线主题过滤', '只看科技/商业/出海', dim)}
       ${row('tabCloak', '标签页伪装 (Google 文档)', '防看Tab', false)}
       ${row('stealthMode', '低调阅读模式 (头像灰度)', '', false)}
       ${row('mediaBlur', '媒体防窥微模糊', 'Hover清晰', false)}
@@ -1241,11 +1261,12 @@
     const modText = IS_MAC ? '快捷键 F 或 ⌥F' : '快捷键 Alt+F';
     add(`🎯 专注模式:${S.focus ? '开启中' : '已关闭'}(${modText})`, toggle('focus'));
     add(`🎛 悬浮设置面板(${IS_MAC ? '快捷键 P 或 ⌥P' : '快捷键 P 或 Alt+P'})`, togglePanel);
-    add('🔥 专栏: 综合精选 (科技+认知+搞钱)', () => openChannel('all'));
+    add('🔥 专栏: 综合精选 (科技+商业+出海)', () => openChannel('all'));
     add('🤖 专栏: 科技 & 前沿 AI', () => openChannel('tech'));
-    add('💡 专栏: 提升认知 & 商业思考', () => openChannel('cognition'));
-    add('💰 专栏: 搞钱 & 出海变现', () => openChannel('money'));
+    add('💡 专栏: 商业深度拆解 & 思维模型', () => openChannel('cognition'));
+    add('💰 专栏: 搞钱 & 独立出海', () => openChannel('money'));
     add(`🚫 彻底屏蔽币圈推广:${S.blockCrypto ? '已开启(无视Binance/合约)' : '已关闭'}`, toggle('blockCrypto'));
+    add(`🚫 彻底屏蔽政治暴论:${S.blockPolitics ? '已开启(无视键政/吵架)' : '已关闭'}`, toggle('blockPolitics'));
     add(`🎯 时间线主题过滤:${S.topicFilter ? '已开启(只看相关)' : '已关闭'}`, toggle('topicFilter'));
     add(`💼 老板键伪装(${IS_MAC ? '单键 B 或 ⌥B' : '单键 B 或 Alt+B'})`, () => {
       toggleBossKey();
