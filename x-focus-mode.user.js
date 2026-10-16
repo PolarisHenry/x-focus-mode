@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.5
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、强力清剿政治暴论/口水战/币圈推广、商业与认知深度拆解专栏、单键 J/K 顺滑翻页。
+// @version      1.8.6
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、强力清剿政治暴论/口水战/币圈推广、新增全网纯过滤漫游与随机知识专栏、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -83,6 +83,14 @@
       name: '🔥 综合精选 (科技+商业+出海)',
       q: `(AI OR 大模型 OR 独立开发 OR Cursor OR Claude OR "商业模式" OR "深度拆解" OR "出海" OR "MRR" OR "复盘" OR "方法论") min_faves:40 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
+    pure: {
+      name: '🌊 纯净漫游 (全网只做过滤)',
+      q: `(的 OR 了 OR 是 OR 在 OR 有) min_faves:40 lang:zh -is:retweet ${NOISE_EXCLUDES}`
+    },
+    knowledge: {
+      name: '🧠 随机知识 & 硬核科普',
+      q: `("冷知识" OR "科普" OR "涨知识" OR "原来如此" OR "你知道吗" OR "硬核科普" OR "冷门知识") min_faves:25 lang:zh -is:retweet ${NOISE_EXCLUDES}`
+    },
     tech: {
       name: '🤖 科技 & 前沿 AI',
       q: `(AI OR 大模型 OR 独立开发 OR LLM OR Claude OR Cursor OR "开源项目" OR "全栈" OR "架构设计") min_faves:30 lang:zh -is:retweet ${NOISE_EXCLUDES}`
@@ -97,7 +105,7 @@
     }
   };
 
-  const TOPIC_REGEX = /(AI|大模型|LLM|Claude|Cursor|GPT|开源|架构|编程|代码|算法|前端|后端|全栈|SaaS|商业模式|思维模型|决策模型|复盘|复利|方法论|读书笔记|搞钱|副业|出海|变现|盈利|MRR|营收|独立开发|冷启动|产品经理|增长|科技)/i;
+  const TOPIC_REGEX = /(AI|大模型|LLM|Claude|Cursor|GPT|开源|架构|编程|代码|算法|前端|后端|全栈|SaaS|商业模式|思维模型|决策模型|复盘|复利|方法论|读书笔记|搞钱|副业|出海|变现|盈利|MRR|营收|独立开发|冷启动|产品经理|增长|科技|冷知识|科普|涨知识)/i;
 
   /* 强力屏蔽币圈/赌博/交易所引流垃圾 (Binance/OKX/合约/代币/空投) */
   const CRYPTO_SPAM_REGEX = /(Binance|币安|BNB|OKX|欧易|Huobi|火币|Gate\.io|空投|撸毛|代币|Token|Memecoin|meme币|土狗|铭文|符文|合约|做多|做空|跟单|带单|爆仓|平仓|以太坊|比特币|\bBTC\b|\bETH\b|\bSOL\b|\bUSDT\b|web3|Web3|区块链|质押|挖矿|返佣|邀请码|百倍币|千倍币|airdrop)/i;
@@ -369,6 +377,15 @@
   .fx-channel-btn.primary:hover {
     background: #1d9bf0; color: #fff;
     box-shadow: 0 4px 14px rgba(29, 155, 240, .35);
+  }
+  .fx-channel-btn.highlight {
+    grid-column: 1 / -1;
+    background: rgba(0, 186, 124, .12); border-color: rgba(0, 186, 124, .35);
+    color: #00ba7c; font-weight: 600;
+  }
+  .fx-channel-btn.highlight:hover {
+    background: #00ba7c; color: #fff;
+    box-shadow: 0 4px 14px rgba(0, 186, 124, .35);
   }
   .fx-foot {
     display: flex; justify-content: space-between; align-items: center;
@@ -1000,9 +1017,11 @@
       ${sec('精选干货专栏 (一键直达)')}
       <div class="fx-channel-grid">
         <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+商业+出海)</button>
+        <button type="button" class="fx-channel-btn highlight" data-channel="pure">🌊 纯净漫游 (全网只做过滤·无币圈)</button>
+        <button type="button" class="fx-channel-btn" data-channel="knowledge">🧠 随机冷知识科普</button>
         <button type="button" class="fx-channel-btn" data-channel="tech">🤖 科技 & AI</button>
         <button type="button" class="fx-channel-btn" data-channel="cognition">💡 商业深度拆解</button>
-        <button type="button" class="fx-channel-btn" data-channel="money">💰 搞钱出海</button>
+        <button type="button" class="fx-channel-btn" data-channel="money">💰 搞钱独立出海</button>
       </div>
 
       ${sec('排版与舒适度')}
@@ -1262,6 +1281,8 @@
     add(`🎯 专注模式:${S.focus ? '开启中' : '已关闭'}(${modText})`, toggle('focus'));
     add(`🎛 悬浮设置面板(${IS_MAC ? '快捷键 P 或 ⌥P' : '快捷键 P 或 Alt+P'})`, togglePanel);
     add('🔥 专栏: 综合精选 (科技+商业+出海)', () => openChannel('all'));
+    add('🌊 专栏: 纯净漫游 (全网只做过滤·无币圈)', () => openChannel('pure'));
+    add('🧠 专栏: 随机知识 & 硬核科普', () => openChannel('knowledge'));
     add('🤖 专栏: 科技 & 前沿 AI', () => openChannel('tech'));
     add('💡 专栏: 商业深度拆解 & 思维模型', () => openChannel('cognition'));
     add('💰 专栏: 搞钱 & 独立出海', () => openChannel('money'));
