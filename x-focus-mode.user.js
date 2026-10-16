@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.0
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、老板键伪装(Google Docs)、高信噪比干货专栏直达（科技/认知/搞钱混合流）、强力清剿币圈/Binance/合约垃圾推广、单键 J/K 顺滑翻页。
+// @version      1.8.1
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、快捷键 P 展开/收起面板、老板键伪装(Google Docs)、高信噪比干货专栏直达（科技/认知/搞钱混合流）、强力清剿币圈/Binance/合约垃圾推广、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -968,7 +968,7 @@
       <div class="fx-foot">
         <button id="fx-reset" type="button">恢复默认</button>
         <span class="fx-tip">
-          ${IS_MAC ? '<span class="fx-kbd">B</span> 老板键 · <span class="fx-kbd">J/K</span> 翻页 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">F</span> 专注' : '<span class="fx-kbd">Alt+B</span> 老板键 · <span class="fx-kbd">J/K</span> 翻页 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">Alt+F</span> 专注'}
+          ${IS_MAC ? '<span class="fx-kbd">P</span> 面板 · <span class="fx-kbd">B</span> 老板键 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页' : '<span class="fx-kbd">Alt+P</span> 面板 · <span class="fx-kbd">Alt+B</span> 老板键 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页'}
         </span>
       </div>`;
   }
@@ -977,7 +977,13 @@
     const p = document.getElementById('fx-panel');
     if (!p || !p.classList.contains('open')) return;
     const ball = document.getElementById('fx-ball');
-    if (!ball) return;
+    if (!ball) {
+      p.style.right = '20px';
+      p.style.bottom = '20px';
+      p.style.left = 'auto';
+      p.style.top = 'auto';
+      return;
+    }
 
     const r = ball.getBoundingClientRect();
     const pw = p.offsetWidth || 290;
@@ -1005,6 +1011,7 @@
   }
 
   function openPanel() {
+    if (spotlightEl && spotlightEl.classList.contains('open')) closeSpotlight();
     const p = ensurePanel();
     renderPanel();
     p.classList.add('open');
@@ -1149,6 +1156,7 @@
 
     const modText = IS_MAC ? '快捷键 F 或 ⌥F' : '快捷键 Alt+F';
     add(`🎯 专注模式:${S.focus ? '开启中' : '已关闭'}(${modText})`, toggle('focus'));
+    add(`🎛 悬浮设置面板(${IS_MAC ? '快捷键 P 或 ⌥P' : '快捷键 P 或 Alt+P'})`, togglePanel);
     add('🔥 专栏: 综合精选 (科技+认知+搞钱)', () => openChannel('all'));
     add('🤖 专栏: 科技 & 前沿 AI', () => openChannel('tech'));
     add('💡 专栏: 提升认知 & 商业思考', () => openChannel('cognition'));
@@ -1200,17 +1208,23 @@
     }
 
     const t = e.target;
-    const typing = t && (
-      t.tagName === 'INPUT' ||
-      t.tagName === 'TEXTAREA' ||
-      t.isContentEditable ||
-      (t.closest && t.closest('input, textarea, [contenteditable="true"], [role="textbox"]'))
-    );
+    const isTextInput = (el) => {
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === 'TEXTAREA') return true;
+      if (el.isContentEditable) return true;
+      if (el.getAttribute && el.getAttribute('role') === 'textbox') return true;
+      if (tag === 'INPUT') {
+        const type = (el.type || '').toLowerCase();
+        return !['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color'].includes(type);
+      }
+      return !!(el.closest && el.closest('textarea, [contenteditable="true"], [role="textbox"], input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"])'));
+    };
 
-    if (typing) return;
+    if (isTextInput(t)) return;
 
     const k = e.key.toLowerCase();
-    // 兼容: Mac 的 Option / Windows 的 Alt，或者纯单键操作(在非打字状态下直接按 F、S、T、B、J、K)
+    // 兼容: Mac 的 Option / Windows 的 Alt，或者纯单键操作(在非打字状态下直接按 P、F、S、T、B、J、K)
     const isMod = e.altKey || (IS_MAC && e.ctrlKey && !e.metaKey);
     const isSingle = !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
 
@@ -1218,6 +1232,9 @@
       if (k === 'b') {
         e.preventDefault();
         toggleBossKey();
+      } else if (k === 'p') {
+        e.preventDefault();
+        togglePanel();
       } else if (k === 'f') {
         e.preventDefault();
         S.focus = !S.focus; save(); apply(); rebuildMenu(); syncPanel();
