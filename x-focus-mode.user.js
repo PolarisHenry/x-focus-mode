@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.1
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、快捷键 P 展开/收起面板、老板键伪装(Google Docs)、高信噪比干货专栏直达（科技/认知/搞钱混合流）、强力清剿币圈/Binance/合约垃圾推广、单键 J/K 顺滑翻页。
+// @version      1.8.2
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、快捷键 P 展开/收起面板、默认媒体微模糊防窥、老板键伪装(Google Docs)、高信噪比干货专栏直达（科技/认知/搞钱混合流）、强力清剿币圈/Binance/合约垃圾推广、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -40,7 +40,7 @@
     width: 900,        // 内容列最大宽度(px)
     typoLevel: 1,      // 排版舒适度: 0 标准(15px), 1 舒适(16.5px), 2 沉浸(18px)
     stealthMode: false,// 摸鱼低调模式: 头像降噪灰度、隐藏蓝V徽标
-    mediaBlur: false,  // 媒体防窥微模糊: 图片/视频默认微模糊遮罩,hover还原
+    mediaBlur: true,   // 媒体防窥微模糊: 图片/视频默认微模糊遮罩,hover还原(默认开启)
     tabCloak: false,   // 标签页伪装: 将标题与图标伪装为 Google 文档
     blockCrypto: true, // 彻底屏蔽币圈推广: 无视 Binance/币安/炒币/合约/空投/代币引流
     topicFilter: false,// 时间线主题过滤: 仅显示科技/认知/搞钱相关推文
@@ -51,7 +51,14 @@
   const WIDTH_PRESETS = [750, 900, 1050, 1200];
   const WIDTHS = [600, 700, 800, 900, 1000, 1100, 1200];
 
-  const S = Object.assign({}, DEFAULTS, GM_getValue('fxState', {}));
+  const stored = GM_getValue('fxState', {});
+  // 若用户尚未在 v1.8.2+ 显式配置过媒体防窥，默认激活开启
+  if (stored._v182_mediaBlurMigrated === undefined) {
+    stored.mediaBlur = true;
+    stored._v182_mediaBlurMigrated = true;
+    try { GM_setValue('fxState', stored); } catch (_) {}
+  }
+  const S = Object.assign({}, DEFAULTS, stored);
   const save = () => GM_setValue('fxState', S);
 
   const DOCS_FAVICON = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%234285F4" d="M30 4H12C9.8 4 8 5.8 8 8v32c0 2.2 1.8 4 4 4h24c2.2 0 4-1.8 4-4V16L30 4z"/><path fill="%23A1C2FA" d="M30 4v12h12L30 4z"/><path fill="%23FFF" d="M14 22h20v2.5H14zm0 6h20v2.5H14zm0 6h14v2.5H14z"/></svg>';
@@ -531,7 +538,7 @@
     document.body.style.setProperty('--fx-font-size', typo.size);
     document.body.style.setProperty('--fx-line-height', typo.line);
 
-    document.body.classList.toggle('fx-media-blur', on && S.mediaBlur);
+    document.body.classList.toggle('fx-media-blur', !!S.mediaBlur);
     document.body.classList.toggle('fx-stealth', S.stealthMode);
     document.body.classList.toggle('fx-pure-black', on && S.pureBlack);
     document.body.style.setProperty('--fx-col-width', S.width + 'px');
@@ -955,7 +962,7 @@
       ${row('topicFilter', '时间线主题过滤', '只看科技/认知/搞钱', dim)}
       ${row('tabCloak', '标签页伪装 (Google 文档)', '防看Tab', false)}
       ${row('stealthMode', '低调阅读模式 (头像灰度)', '', false)}
-      ${row('mediaBlur', '媒体防窥微模糊', 'Hover清晰', dim)}
+      ${row('mediaBlur', '媒体防窥微模糊', 'Hover清晰', false)}
 
       ${sec('界面控制')}
       ${row('hideLeft', '隐藏左侧导航', '', dim)}
