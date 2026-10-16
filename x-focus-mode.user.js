@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.8
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/口水战/币圈推广、随机跨领域通识专栏、一键批量同步50+垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
+// @version      1.8.9
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -69,8 +69,8 @@
   /* 强力屏蔽词: 币圈 / 炒币 / 合约 / 交易所 / 空投引流 */
   const CRYPTO_EXCLUDES = '-Binance -币安 -BNB -OKX -欧易 -crypto -空投 -撸毛 -代币 -Token -合约 -做空 -做多 -土狗 -铭文 -符文 -以太坊 -比特币 -BTC -ETH -SOL -返佣 -爆仓 -打新 -airdrop';
 
-  /* 强力屏蔽词: 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 (彻底过滤垃圾内容) */
-  const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -中国共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -大外宣 -配得上你的苦难 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
+  /* 强力屏蔽词: 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 / 极端扣帽子 (彻底过滤垃圾内容) */
+  const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -中国共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -反动 -反动派 -汉奸 -走狗 -卖国贼 -境外势力 -美狗 -日杂 -辱华 -反华 -公知 -阶级斗争 -批斗 -洗地 -大外宣 -配得上你的苦难 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
 
   /* 强力屏蔽词: 灰产割韭菜 / 营销号引流 */
   const SCAM_EXCLUDES = '-带徒弟 -私信我 -加微信 -日入 -月入十万';
@@ -111,20 +111,22 @@
   /* 强力屏蔽币圈/赌博/交易所引流垃圾 (Binance/OKX/合约/代币/空投) */
   const CRYPTO_SPAM_REGEX = /(Binance|币安|BNB|OKX|欧易|Huobi|火币|Gate\.io|空投|撸毛|代币|Token|Memecoin|meme币|土狗|铭文|符文|合约|做多|做空|跟单|带单|爆仓|平仓|以太坊|比特币|\bBTC\b|\bETH\b|\bSOL\b|\bUSDT\b|web3|Web3|区块链|质押|挖矿|返佣|邀请码|百倍币|千倍币|airdrop)/i;
 
-  /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击 */
-  const POLITICS_SPAM_REGEX = /(中共|共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|大外宣)/i;
+  /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击、极端扣帽子 */
+  const POLITICS_SPAM_REGEX = /(中共|共产党|中国共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|反动|反动派|汉奸|走狗|卖国贼|境外势力|美狗|日杂|辱华|反华|公知|阶级斗争|批斗|洗地|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|互害|贱民|大外宣)/i;
 
-  /* ---------------- Twitter 官方屏蔽词库导入列表 (52个核心高频垃圾词) ---------------- */
+  /* ---------------- Twitter 官方屏蔽词库导入列表 (核心高频垃圾词) ---------------- */
   const OFFICIAL_MUTE_KEYWORDS = [
     // 币圈 / 炒币 / 合约 / 交易所 / 空投引流
     'Binance', '币安', 'BNB', 'OKX', '欧易', 'crypto', '空投', '撸毛', '代币', 'Token',
     '合约', '做空', '做多', '土狗', '铭文', '符文', '以太坊', '比特币', 'BTC', 'ETH',
     'SOL', 'USDT', '返佣', '爆仓', '打新', 'airdrop', 'Memecoin', '跟单', '带单',
     '百倍币', '千倍币', '质押', 'Huobi', '火币',
-    // 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂
-    '中共', '共产党', '习近平', '川普', '特朗普', '独裁', '专制', '体制内',
+    // 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 / 极端扣帽子
+    '中共', '共产党', '中国共产党', '习近平', '川普', '特朗普', '独裁', '专制', '体制内',
     '洗脑', '支那', '支人', '粉红', '五毛', '反贼', '润人', '殖人', '大外宣',
-    '配得上你的苦难', '傻逼', '弱智', '脑残', '劣根性', '人矿', '互害',
+    '反动', '反动派', '汉奸', '走狗', '卖国贼', '境外势力', '美狗', '日杂', '辱华', '反华',
+    '公知', '阶级斗争', '批斗', '洗地',
+    '配得上你的苦难', '傻逼', '弱智', '脑残', '劣根性', '人矿', '互害', '贱民',
     // 灰产引流
     '带徒弟', '私信我', '加微信', '日入', '月入十万'
   ];
@@ -1095,9 +1097,9 @@
       <div class="fx-sync-banner-content">
         <div class="fx-sync-banner-text">
           <strong>🛡️ X 专注阅读模式 · 官方屏蔽词一键同步</strong>
-          <span>一键将 52 个币圈炒币、合约、空投引流及政治暴论垃圾词批量写入你的 Twitter 账号。</span>
+          <span>一键将 ${OFFICIAL_MUTE_KEYWORDS.length} 个币圈炒币、合约、空投引流、反动及政治口水垃圾词批量写入你的 Twitter 账号。</span>
         </div>
-        <button id="fx-sync-banner-btn" type="button">⚡️ 一键自动同步 (52 个垃圾词)</button>
+        <button id="fx-sync-banner-btn" type="button">⚡️ 一键自动同步 (${OFFICIAL_MUTE_KEYWORDS.length} 个垃圾词)</button>
       </div>
     `;
     document.body.appendChild(banner);
@@ -1324,8 +1326,8 @@
         ${sec('Twitter 官方屏蔽词库联动')}
         <div class="fx-action-card">
           <div class="fx-action-title">🛡️ 官方屏蔽词库一键同步</div>
-          <div class="fx-action-desc">将 52 个高频币圈与政治口水词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
-          <button type="button" id="fx-sync-mutes-btn" class="fx-btn-action">⚡️ 立即一键同步 (52 个垃圾词)</button>
+          <div class="fx-action-desc">将 ${OFFICIAL_MUTE_KEYWORDS.length} 个高频币圈、反动与政治口水词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
+          <button type="button" id="fx-sync-mutes-btn" class="fx-btn-action">⚡️ 立即一键同步 (${OFFICIAL_MUTE_KEYWORDS.length} 个垃圾词)</button>
         </div>
       `;
     } else if (activeTab === 'ui') {
