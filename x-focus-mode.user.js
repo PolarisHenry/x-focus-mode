@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.2
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、快捷键 P 展开/收起面板、默认媒体微模糊防窥、老板键伪装(Google Docs)、高信噪比干货专栏直达（科技/认知/搞钱混合流）、强力清剿币圈/Binance/合约垃圾推广、单键 J/K 顺滑翻页。
+// @version      1.8.3
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、顶栏 P 面板胶囊(位于 S 左侧)、面板智能避让防重叠、默认媒体微模糊防窥、单键 J/K 顺滑翻页(J上一页/K下一页)、强力清剿币圈/Binance/合约垃圾推广。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -35,8 +35,8 @@
     focus: true,       // 专注模式总开关
     hideLeft: true,    // 隐藏左侧导航栏
     hideRight: true,   // 隐藏右侧信息栏(搜索/趋势/推荐关注)
-    keepSearch: false, // 右栏隐藏时,是否保留浮动搜索按钮(默认不保留 = 全部隐藏)
-    showBall: true,    // 显示页面内悬浮设置球
+    keepSearch: true,  // 右栏隐藏时,保留右上角浮动搜索按钮与面板胶囊 (默认展示 S 与 P)
+    showBall: true,    // 显示页面内控制胶囊(面板入口 P)
     width: 900,        // 内容列最大宽度(px)
     typoLevel: 1,      // 排版舒适度: 0 标准(15px), 1 舒适(16.5px), 2 沉浸(18px)
     stealthMode: false,// 摸鱼低调模式: 头像降噪灰度、隐藏蓝V徽标
@@ -46,16 +46,18 @@
     topicFilter: false,// 时间线主题过滤: 仅显示科技/认知/搞钱相关推文
     progressBar: true, // 屏幕顶端极细阅读滚动进度条
     pureBlack: false,  // OLED 纯黑极简背景
-    ballPos: null,     // 悬浮球位置 {x, y}
+    ballPos: null,     // 悬浮胶囊位置 {x, y}，默认为 null 自动居于 S 左侧
   };
   const WIDTH_PRESETS = [750, 900, 1050, 1200];
   const WIDTHS = [600, 700, 800, 900, 1000, 1100, 1200];
 
   const stored = GM_getValue('fxState', {});
-  // 若用户尚未在 v1.8.2+ 显式配置过媒体防窥，默认激活开启
-  if (stored._v182_mediaBlurMigrated === undefined) {
+  // v1.8.3 迁移: 将 P 默认位置重置为停靠在 S 左侧，启用 keepSearch 联动
+  if (!stored._v183_migrated) {
+    stored.ballPos = null; // 重置为新的默认位置 (S 左边)
+    stored.keepSearch = true; // 确保右上角 S 搜索与 P 面板联动排布
     stored.mediaBlur = true;
-    stored._v182_mediaBlurMigrated = true;
+    stored._v183_migrated = true;
     try { GM_setValue('fxState', stored); } catch (_) {}
   }
   const S = Object.assign({}, DEFAULTS, stored);
@@ -184,18 +186,18 @@
     background-color: #000000 !important;
   }
 
-  /* ============ 页面内 UI:极简毛玻璃悬浮球 ============ */
+  /* ============ 页面内 UI:极简毛玻璃控制胶囊 (P 入口) ============ */
   #fx-ball {
-    position: fixed; z-index: 2147483000;
-    width: 42px; height: 42px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+    position: fixed; z-index: 2147483005;
+    height: 36px; padding: 0 12px; border-radius: 9999px;
+    display: inline-flex; align-items: center; gap: 8px;
     background: rgba(15, 20, 25, .82);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, .15);
     color: #eff3f4;
     cursor: grab; user-select: none; touch-action: none;
-    opacity: .65;
+    font-size: 12.5px; font-weight: 500;
     transition: opacity .2s cubic-bezier(0.16, 1, 0.3, 1),
                 transform .2s cubic-bezier(0.16, 1, 0.3, 1),
                 border-color .2s ease,
@@ -204,21 +206,19 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .1);
   }
   #fx-ball:hover {
-    opacity: 1;
-    transform: scale(1.08);
-    background: rgba(29, 155, 240, .15);
+    transform: scale(1.04);
+    background: rgba(29, 155, 240, .18);
     border-color: rgba(29, 155, 240, .5);
     color: #1d9bf0;
-    box-shadow: 0 6px 22px rgba(29, 155, 240, .22), inset 0 1px 0 rgba(255, 255, 255, .2);
+    box-shadow: 0 4px 20px rgba(29, 155, 240, .25), inset 0 1px 0 rgba(255, 255, 255, .2);
   }
   #fx-ball.drag {
-    opacity: 1;
     cursor: grabbing;
     transform: scale(0.96);
     border-color: #1d9bf0;
   }
   #fx-ball svg {
-    pointer-events: none;
+    width: 15px; height: 15px; pointer-events: none;
     transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   #fx-ball:hover svg {
@@ -227,7 +227,7 @@
 
   /* ============ 页面内 UI:设置面板 ============ */
   #fx-panel {
-    position: fixed; z-index: 2147483000; width: 290px; padding: 12px;
+    position: fixed; z-index: 2147483000; width: 300px; padding: 12px;
     display: none; max-height: calc(100vh - 32px); overflow-y: auto;
     background: rgba(15, 20, 25, .94); color: #eff3f4;
     border: 1px solid rgba(255, 255, 255, .14); border-radius: 16px;
@@ -722,26 +722,46 @@
     }
   }
 
-  /* ---------------- 键盘极速推文流翻页 (J 下一条 / K 上一条) ---------------- */
+  /* ---------------- 键盘极速推文流翻页 (J 上一页 / K 下一页) ---------------- */
   function navTweet(dir) {
-    const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
+    // 过滤掉被插件隐藏的推广推文以及零宽高不可见节点
+    const tweets = Array.from(document.querySelectorAll('article[data-testid="tweet"]'))
+      .filter((el) => {
+        const wrap = el.closest('div[data-testid="cellInnerDiv"]');
+        if (wrap && (wrap.style.display === 'none' || wrap.dataset.fxFiltered)) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 30 && rect.height > 30;
+      });
+
+    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+    const headerHeight = 58; // 顶部粘性条安全避让高度
+
     if (!tweets.length) {
-      window.scrollBy({ top: dir * 350, behavior: 'smooth' });
+      window.scrollBy({ top: dir * Math.round(window.innerHeight * 0.65), behavior: 'smooth' });
       return;
     }
-    const headerOffset = 64;
+
     if (dir > 0) {
-      const next = tweets.find((el) => el.getBoundingClientRect().top > headerOffset + 12);
+      // k: 下一页 (向下滚动)
+      const next = tweets.find((el) => el.getBoundingClientRect().top > headerHeight + 15);
       if (next) {
-        next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const targetY = currentY + next.getBoundingClientRect().top - headerHeight - 8;
+        window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
       } else {
-        window.scrollBy({ top: 400, behavior: 'smooth' });
+        // 到底部或当前批次已浏览完，按视口高度 70% 步进触底加载新推文
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.7), behavior: 'smooth' });
       }
     } else {
-      const prevList = tweets.filter((el) => el.getBoundingClientRect().top < headerOffset - 12);
+      // j: 上一页 (向上滚动)
+      if (currentY <= 60) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      const prevList = tweets.filter((el) => el.getBoundingClientRect().top < headerHeight - 15);
       if (prevList.length) {
         const prev = prevList[prevList.length - 1];
-        prev.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const targetY = currentY + prev.getBoundingClientRect().top - headerHeight - 8;
+        window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -796,19 +816,37 @@
     location.assign(url);
   }
 
-  /* ---------------- 悬浮设置球(可拖动/双击回顶部) ---------------- */
+  /* ---------------- 页面内极简控制胶囊 (P 入口，位于 S 左侧) ---------------- */
   function mountBall() {
     if (!document.body || document.getElementById('fx-ball')) return;
     const ball = document.createElement('div');
     ball.id = 'fx-ball';
-    ball.title = '专注模式设置 (点击打开面板，双击回顶部，可拖动)';
-    ball.innerHTML = ICON_FOCUS;
+    ball.title = '专注模式设置 (快捷键 P，点击开/关面板，双击回顶部，可拖拽)';
+    ball.innerHTML = `${ICON_FOCUS}<span>面板</span><span class="fx-kbd">P</span>`;
     document.body.appendChild(ball);
 
-    if (!S.ballPos) { S.ballPos = { x: 16, y: innerHeight - 60 }; save(); }
+    // 计算 P 的默认停靠位置：精准吸附在 S (搜索胶囊) 的左侧
+    const calcDefaultPPos = () => {
+      const searchEl = document.getElementById('fx-search-trigger');
+      const hasSearch = searchEl && getComputedStyle(searchEl).display !== 'none';
+      const searchRight = 18;
+      const searchWidth = hasSearch ? (searchEl.offsetWidth || 82) : 0;
+      const gap = 10;
+      const pWidth = ball.offsetWidth || 84;
+      const x = hasSearch 
+        ? (window.innerWidth - searchRight - searchWidth - gap - pWidth)
+        : (window.innerWidth - searchRight - pWidth);
+      return { x: Math.max(16, x), y: 14 };
+    };
+
+    if (!S.ballPos) {
+      S.ballPos = calcDefaultPPos();
+      save();
+    }
     const pos = S.ballPos;
     const clamp = () => {
-      pos.x = Math.min(Math.max(pos.x, 8), innerWidth - 48);
+      const bw = ball.offsetWidth || 84;
+      pos.x = Math.min(Math.max(pos.x, 8), innerWidth - bw - 8);
       pos.y = Math.min(Math.max(pos.y, 8), innerHeight - 48);
     };
     const place = () => {
@@ -823,6 +861,7 @@
     ball.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       dragging = true; moved = false;
+      closePanel(); // 开始拖拽即刻收起面板，彻底杜绝拖动时面板与胶囊重叠或抖动
       sx = e.clientX; sy = e.clientY; ox = pos.x; oy = pos.y;
       ball.setPointerCapture(e.pointerId);
       ball.classList.add('drag');
@@ -837,8 +876,11 @@
     const up = () => {
       if (!dragging) return;
       dragging = false; ball.classList.remove('drag');
-      if (moved) { clamp(); save(); } // 拖动:记住新位置
-      else togglePanel();             // 点击:开关面板
+      if (moved) {
+        clamp(); save(); // 拖动结束: 记住用户自定义位置
+      } else {
+        togglePanel();   // 原地点击: 展开/收起面板
+      }
     };
     ball.addEventListener('pointerup', up);
     ball.addEventListener('pointercancel', up);
@@ -846,7 +888,12 @@
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-    window.addEventListener('resize', place);
+    window.addEventListener('resize', () => {
+      if (!S.ballPos) {
+        S.ballPos = calcDefaultPPos();
+      }
+      place();
+    });
   }
 
   /* ---------------- 设置面板 ---------------- */
@@ -975,7 +1022,7 @@
       <div class="fx-foot">
         <button id="fx-reset" type="button">恢复默认</button>
         <span class="fx-tip">
-          ${IS_MAC ? '<span class="fx-kbd">P</span> 面板 · <span class="fx-kbd">B</span> 老板键 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页' : '<span class="fx-kbd">Alt+P</span> 面板 · <span class="fx-kbd">Alt+B</span> 老板键 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页'}
+          ${IS_MAC ? '<span class="fx-kbd">P</span> 面板 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页(J上/K下) · <span class="fx-kbd">B</span> 老板键' : '<span class="fx-kbd">Alt+P</span> 面板 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页(J上/K下) · <span class="fx-kbd">Alt+B</span> 老板键'}
         </span>
       </div>`;
   }
@@ -985,33 +1032,62 @@
     if (!p || !p.classList.contains('open')) return;
     const ball = document.getElementById('fx-ball');
     if (!ball) {
-      p.style.right = '20px';
-      p.style.bottom = '20px';
+      p.style.right = '18px';
+      p.style.top = '58px';
       p.style.left = 'auto';
-      p.style.top = 'auto';
+      p.style.bottom = 'auto';
       return;
     }
 
     const r = ball.getBoundingClientRect();
-    const pw = p.offsetWidth || 290;
-    const ph = p.offsetHeight || 420;
+    const pw = p.offsetWidth || 300;
+    const ph = p.offsetHeight || 440;
 
-    // 水平定位: 屏幕左半边靠球左对齐，右半边靠球右对齐，跟随拖拽即时随动
-    let x = (r.left > innerWidth / 2) ? (r.right - pw) : r.left;
+    // 清除可能产生样式干扰的右/底绝对定位
+    p.style.right = 'auto';
+    p.style.bottom = 'auto';
 
-    // 垂直定位: 屏幕下半边放小球上方，上半边放小球下方
-    const spaceBelow = innerHeight - r.bottom;
-    const spaceAbove = r.top;
+    const gap = 10;
+    const spaceBelow = innerHeight - r.bottom - gap - 12;
+    const spaceAbove = r.top - gap - 12;
+
     let y;
-    if (r.top > innerHeight / 2) {
-      y = (spaceAbove >= ph + 8 || spaceAbove >= spaceBelow) ? (r.top - ph - 8) : (r.bottom + 8);
+    // 垂直避让策略：严禁面板与控制胶囊在垂直区间重叠
+    if (r.top < innerHeight / 2) {
+      // 胶囊在屏幕上半部分（默认停靠在右上角 S 旁边）：面板放在胶囊正下方展开
+      if (spaceBelow >= Math.min(ph, 260) || spaceBelow >= spaceAbove) {
+        y = r.bottom + gap;
+        p.style.maxHeight = Math.max(200, spaceBelow) + 'px';
+      } else {
+        y = Math.max(8, r.top - ph - gap);
+        p.style.maxHeight = Math.max(200, spaceAbove) + 'px';
+      }
     } else {
-      y = (spaceBelow >= ph + 8 || spaceBelow >= spaceAbove) ? (r.bottom + 8) : (r.top - ph - 8);
+      // 胶囊在屏幕下半部分：面板优先放在胶囊正上方展开
+      if (spaceAbove >= Math.min(ph, 260) || spaceAbove >= spaceBelow) {
+        y = r.top - ph - gap;
+        if (y < 8) {
+          y = 8;
+          p.style.maxHeight = Math.max(200, r.top - gap - 8) + 'px';
+        }
+      } else {
+        y = r.bottom + gap;
+        p.style.maxHeight = Math.max(200, spaceBelow) + 'px';
+      }
     }
 
-    // 视口安全边界保护
+    // 水平对齐策略
+    let x;
+    if (r.left > innerWidth / 2) {
+      // 胶囊在右半屏（如默认停在右上角 S 旁边）：面板右外缘与胶囊右外缘对齐
+      x = r.right - pw;
+    } else {
+      // 胶囊在左半屏：面板左外缘与胶囊左外缘对齐
+      x = r.left;
+    }
+
+    // 视口水平安全边界保护
     x = Math.max(8, Math.min(innerWidth - pw - 8, x));
-    y = Math.max(8, Math.min(innerHeight - ph - 8, y));
 
     p.style.left = Math.round(x) + 'px';
     p.style.top = Math.round(y) + 'px';
@@ -1253,10 +1329,10 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (k === 'j') {
         e.preventDefault();
-        navTweet(1);
+        navTweet(-1); // J: 上一页 (向上滚动)
       } else if (k === 'k') {
         e.preventDefault();
-        navTweet(-1);
+        navTweet(1);  // K: 下一页 (向下滚动)
       }
     }
   }, true);
