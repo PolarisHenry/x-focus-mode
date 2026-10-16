@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.7
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、强力清剿政治暴论/口水战/币圈推广、随机跨领域通识专栏、一键批量同步50+垃圾词到Twitter官方屏蔽词库、单键 J/K 顺滑翻页。
+// @version      1.8.8
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/口水战/币圈推广、随机跨领域通识专栏、一键批量同步50+垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -48,6 +48,7 @@
     progressBar: true, // 屏幕顶端极细阅读滚动进度条
     pureBlack: false,  // OLED 纯黑极简背景
     ballPos: null,     // 悬浮球位置 {x, y}，默认为 null 自动居于 S 左侧
+    activeTab: 'feed', // 当前激活的面板标签: 'feed' 专栏漫游, 'filter' 深度过滤, 'ui' 界面控制
   };
   const WIDTH_PRESETS = [750, 900, 1050, 1200];
   const WIDTHS = [600, 700, 800, 900, 1000, 1100, 1200];
@@ -263,8 +264,8 @@
 
   /* ============ 页面内 UI:设置面板 ============ */
   #fx-panel {
-    position: fixed; z-index: 2147483000; width: 300px; padding: 12px;
-    display: none; max-height: calc(100vh - 32px); overflow-y: auto;
+    position: fixed; z-index: 2147483000; width: 330px; padding: 12px;
+    display: none; max-height: 520px; overflow-y: auto;
     background: rgba(15, 20, 25, .94); color: #eff3f4;
     border: 1px solid rgba(255, 255, 255, .14); border-radius: 16px;
     box-shadow: 0 14px 40px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .1);
@@ -273,6 +274,11 @@
     font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     animation: fx-fade-in .15s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  #fx-panel::-webkit-scrollbar { width: 5px; }
+  #fx-panel::-webkit-scrollbar-track { background: transparent; }
+  #fx-panel::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .15); border-radius: 3px; }
+  #fx-panel::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .3); }
+
   @keyframes fx-fade-in {
     from { opacity: 0; transform: translateY(4px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
@@ -280,9 +286,8 @@
   #fx-panel.open { display: block; }
   .fx-h {
     display: flex; justify-content: space-between; align-items: center;
-    font-weight: 700; padding: 2px 4px 10px; font-size: 14.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
-    margin-bottom: 6px;
+    font-weight: 700; padding: 2px 4px 8px; font-size: 14.5px;
+    margin-bottom: 4px;
   }
   .fx-h-title {
     display: flex; align-items: center; gap: 8px; color: #fff;
@@ -297,6 +302,29 @@
   .fx-h button:hover {
     color: #fff; background: rgba(255, 255, 255, .14);
     transform: scale(1.05);
+  }
+
+  /* 面板顶级多标签页导航 (极致紧凑, 高度减少65%) */
+  .fx-tabs {
+    display: flex; gap: 4px; padding: 2px 0 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    margin-bottom: 6px;
+  }
+  .fx-tab-btn {
+    flex: 1; padding: 5px 0; border-radius: 7px; border: 1px solid transparent;
+    background: rgba(255, 255, 255, .04); color: rgba(255, 255, 255, .65);
+    font-size: 11.5px; font-weight: 500; cursor: pointer; text-align: center;
+    transition: all .15s ease; user-select: none;
+  }
+  .fx-tab-btn:hover {
+    color: #eff3f4; background: rgba(255, 255, 255, .08);
+  }
+  .fx-tab-btn.active {
+    background: rgba(29, 155, 240, .18); border-color: rgba(29, 155, 240, .35);
+    color: #1d9bf0; font-weight: 600;
+  }
+  .fx-tab-content {
+    display: flex; flex-direction: column; gap: 2px;
   }
   .fx-sec {
     font-size: 10.5px; font-weight: 700; text-transform: uppercase;
@@ -1191,6 +1219,15 @@
           save(); apply(); rebuildMenu(); renderPanel();
           return;
         }
+        // 顶部多Tab切换
+        const tabBtn = e.target.closest('[data-tab]');
+        if (tabBtn) {
+          S.activeTab = tabBtn.dataset.tab;
+          save();
+          renderPanel();
+          repositionPanel();
+          return;
+        }
         // 精选干货专栏直达
         const ch = e.target.closest('[data-channel]');
         if (ch) {
@@ -1241,67 +1278,90 @@
     const kbdFocus = IS_MAC ? 'F / ⌥F' : 'Alt+F';
     const kbdSearch = IS_MAC ? 'S / ⌥S' : 'Alt+S';
 
+    const activeTab = S.activeTab || 'feed';
+
+    let contentHtml = '';
+    if (activeTab === 'feed') {
+      contentHtml = `
+        ${row('focus', '专注模式总开关', kbdFocus, false)}
+        
+        ${sec('精选干货专栏 (一键直达)')}
+        <div class="fx-channel-grid">
+          <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+商业+出海)</button>
+          <button type="button" class="fx-channel-btn highlight" data-channel="pure">🌊 纯净漫游 (全网只做过滤·无币圈)</button>
+          <button type="button" class="fx-channel-btn" data-channel="knowledge">🧠 随机跨领域知识</button>
+          <button type="button" class="fx-channel-btn" data-channel="tech">🤖 科技 & AI</button>
+          <button type="button" class="fx-channel-btn" data-channel="cognition">💡 商业深度拆解</button>
+          <button type="button" class="fx-channel-btn" data-channel="money">💰 搞钱独立出海</button>
+        </div>
+
+        ${sec('排版模式')}
+        <div class="fx-seg-wrap"${dim ? ' style="opacity:.5;pointer-events:none"' : ''}>
+          ${TYPO_LEVELS.map((t, idx) => `
+            <button type="button" class="fx-seg-item ${S.typoLevel === idx ? 'active' : ''}" data-typo="${idx}">
+              ${t.label} <small style="opacity:.65">${t.size}</small>
+            </button>
+          `).join('')}
+        </div>
+
+        ${sec('内容列宽')}
+        <div class="fx-pills"${dim ? ' style="opacity:.5;pointer-events:none"' : ''}>
+          ${WIDTH_PRESETS.map((w) => `
+            <button type="button" class="fx-pill ${S.width === w ? 'active' : ''}" data-w="${w}">
+              ${w}px
+            </button>
+          `).join('')}
+        </div>
+        <input type="range" id="fx-wr" min="600" max="1200" step="50" value="${S.width}">
+      `;
+    } else if (activeTab === 'filter') {
+      contentHtml = `
+        ${sec('垃圾内容深度清剿')}
+        ${row('blockCrypto', '彻底屏蔽币圈推广', '无视Binance/合约/空投', false)}
+        ${row('blockPolitics', '彻底屏蔽政治暴论', '无视键政/吵架/戾气', false)}
+        ${row('topicFilter', '时间线主题过滤', '只看科技/商业/出海', dim)}
+
+        ${sec('Twitter 官方屏蔽词库联动')}
+        <div class="fx-action-card">
+          <div class="fx-action-title">🛡️ 官方屏蔽词库一键同步</div>
+          <div class="fx-action-desc">将 52 个高频币圈与政治口水词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
+          <button type="button" id="fx-sync-mutes-btn" class="fx-btn-action">⚡️ 立即一键同步 (52 个垃圾词)</button>
+        </div>
+      `;
+    } else if (activeTab === 'ui') {
+      contentHtml = `
+        ${sec('职场摸鱼防窥')}
+        ${row('tabCloak', '标签页伪装 (Google 文档)', '防看Tab', false)}
+        ${row('stealthMode', '低调阅读模式 (头像灰度)', '', false)}
+        ${row('mediaBlur', '媒体防窥微模糊', 'Hover清晰', false)}
+
+        ${sec('界面与杂栏控制')}
+        ${row('hideLeft', '隐藏左侧导航', '', dim)}
+        ${row('hideRight', '隐藏右侧边栏', '', dim)}
+        ${row('keepSearch', '保留浮动搜索按钮', kbdSearch, dim)}
+        ${row('progressBar', '屏幕顶部阅读进度条', '', dim)}
+        ${row('pureBlack', 'OLED 纯黑背景', '', dim)}
+        ${row('showBall', '显示悬浮设置球', '', false)}
+      `;
+    }
+
     p.innerHTML = `
       <div class="fx-h">
         <div class="fx-h-title">${ICON_FOCUS_HEADER}<span>专注阅读</span></div>
         <button id="fx-close" type="button" title="关闭">${ICON_CLOSE}</button>
       </div>
-      ${row('focus', '专注模式总开关', kbdFocus, false)}
-      
-      ${sec('精选干货专栏 (一键直达)')}
-      <div class="fx-channel-grid">
-        <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+商业+出海)</button>
-        <button type="button" class="fx-channel-btn highlight" data-channel="pure">🌊 纯净漫游 (全网只做过滤·无币圈)</button>
-        <button type="button" class="fx-channel-btn" data-channel="knowledge">🧠 随机跨领域知识</button>
-        <button type="button" class="fx-channel-btn" data-channel="tech">🤖 科技 & AI</button>
-        <button type="button" class="fx-channel-btn" data-channel="cognition">💡 商业深度拆解</button>
-        <button type="button" class="fx-channel-btn" data-channel="money">💰 搞钱独立出海</button>
+      <div class="fx-tabs">
+        <button type="button" class="fx-tab-btn ${activeTab === 'feed' ? 'active' : ''}" data-tab="feed">🧭 专栏漫游</button>
+        <button type="button" class="fx-tab-btn ${activeTab === 'filter' ? 'active' : ''}" data-tab="filter">🛡️ 深度过滤</button>
+        <button type="button" class="fx-tab-btn ${activeTab === 'ui' ? 'active' : ''}" data-tab="ui">⚙️ 界面控制</button>
       </div>
-
-      ${sec('排版与舒适度')}
-      <div class="fx-seg-wrap"${dim ? ' style="opacity:.5;pointer-events:none"' : ''}>
-        ${TYPO_LEVELS.map((t, idx) => `
-          <button type="button" class="fx-seg-item ${S.typoLevel === idx ? 'active' : ''}" data-typo="${idx}">
-            ${t.label} <small style="opacity:.65">${t.size}</small>
-          </button>
-        `).join('')}
+      <div class="fx-tab-content">
+        ${contentHtml}
       </div>
-
-      ${sec('内容列宽')}
-      <div class="fx-pills"${dim ? ' style="opacity:.5;pointer-events:none"' : ''}>
-        ${WIDTH_PRESETS.map((w) => `
-          <button type="button" class="fx-pill ${S.width === w ? 'active' : ''}" data-w="${w}">
-            ${w}px
-          </button>
-        `).join('')}
-      </div>
-      <input type="range" id="fx-wr" min="600" max="1200" step="50" value="${S.width}">
-
-      ${sec('摸鱼防护 & 内容过滤')}
-      ${row('blockCrypto', '彻底屏蔽币圈推广', '无视Binance/合约/空投', false)}
-      ${row('blockPolitics', '彻底屏蔽政治暴论', '无视键政/吵架/戾气', false)}
-      ${row('topicFilter', '时间线主题过滤', '只看科技/商业/出海', dim)}
-      ${row('tabCloak', '标签页伪装 (Google 文档)', '防看Tab', false)}
-      ${row('stealthMode', '低调阅读模式 (头像灰度)', '', false)}
-      ${row('mediaBlur', '媒体防窥微模糊', 'Hover清晰', false)}
-      <div class="fx-action-card">
-        <div class="fx-action-title">🛡️ Twitter 官方屏蔽词库联动</div>
-        <div class="fx-action-desc">一键将 52 个高频币圈、炒币与政治暴论词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
-        <button type="button" id="fx-sync-mutes-btn" class="fx-btn-action">⚡️ 立即一键同步 (52 个垃圾词)</button>
-      </div>
-
-      ${sec('界面控制')}
-      ${row('hideLeft', '隐藏左侧导航', '', dim)}
-      ${row('hideRight', '隐藏右侧边栏', '', dim)}
-      ${row('keepSearch', '保留浮动搜索按钮', kbdSearch, dim)}
-      ${row('progressBar', '屏幕顶部阅读进度条', '', dim)}
-      ${row('pureBlack', 'OLED 纯黑背景', '', dim)}
-      ${row('showBall', '显示悬浮设置球', '', false)}
-
       <div class="fx-foot">
         <button id="fx-reset" type="button">恢复默认</button>
         <span class="fx-tip">
-          ${IS_MAC ? '<span class="fx-kbd">P</span> 面板 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页(J上/K下) · <span class="fx-kbd">B</span> 老板键' : '<span class="fx-kbd">Alt+P</span> 面板 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页(J上/K下) · <span class="fx-kbd">Alt+B</span> 老板键'}
+          ${IS_MAC ? '<span class="fx-kbd">P</span> 面板 · <span class="fx-kbd">S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页 · <span class="fx-kbd">B</span> 老板键' : '<span class="fx-kbd">Alt+P</span> 面板 · <span class="fx-kbd">Alt+S</span> 搜索 · <span class="fx-kbd">J/K</span> 翻页 · <span class="fx-kbd">Alt+B</span> 老板键'}
         </span>
       </div>`;
   }
@@ -1336,10 +1396,10 @@
       // 胶囊在屏幕上半部分（默认停靠在右上角 S 旁边）：面板放在胶囊正下方展开
       if (spaceBelow >= Math.min(ph, 260) || spaceBelow >= spaceAbove) {
         y = r.bottom + gap;
-        p.style.maxHeight = Math.max(200, spaceBelow) + 'px';
+        p.style.maxHeight = Math.min(520, Math.max(200, spaceBelow)) + 'px';
       } else {
         y = Math.max(8, r.top - ph - gap);
-        p.style.maxHeight = Math.max(200, spaceAbove) + 'px';
+        p.style.maxHeight = Math.min(520, Math.max(200, spaceAbove)) + 'px';
       }
     } else {
       // 胶囊在屏幕下半部分：面板优先放在胶囊正上方展开
@@ -1347,11 +1407,11 @@
         y = r.top - ph - gap;
         if (y < 8) {
           y = 8;
-          p.style.maxHeight = Math.max(200, r.top - gap - 8) + 'px';
+          p.style.maxHeight = Math.min(520, Math.max(200, r.top - gap - 8)) + 'px';
         }
       } else {
         y = r.bottom + gap;
-        p.style.maxHeight = Math.max(200, spaceBelow) + 'px';
+        p.style.maxHeight = Math.min(520, Math.max(200, spaceBelow)) + 'px';
       }
     }
 
