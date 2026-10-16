@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.9
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
+// @version      1.8.10
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -1156,9 +1156,12 @@
     let dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
     ball.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      dragging = true; moved = false;
-      closePanel(); // 开始拖拽即刻收起面板，彻底杜绝拖动时面板与胶囊重叠或抖动
-      sx = e.clientX; sy = e.clientY; ox = pos.x; oy = pos.y;
+      dragging = true;
+      moved = false;
+      sx = e.clientX;
+      sy = e.clientY;
+      ox = pos.x;
+      oy = pos.y;
       ball.setPointerCapture(e.pointerId);
       ball.classList.add('drag');
       e.preventDefault();
@@ -1166,27 +1169,42 @@
     ball.addEventListener('pointermove', (e) => {
       if (!dragging) return;
       const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-      if (moved) { pos.x = ox + dx; pos.y = oy + dy; place(); }
-    });
-    const up = () => {
-      if (!dragging) return;
-      dragging = false; ball.classList.remove('drag');
+      if (!moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        moved = true;
+        closePanel(); // 仅当真正发生拖拽位移时才收起面板，彻底杜绝原地点击时误提前关闭导致无法收起
+      }
       if (moved) {
-        clamp(); save(); // 拖动结束: 记住用户自定义位置
+        pos.x = ox + dx;
+        pos.y = oy + dy;
+        place();
+      }
+    });
+    const up = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      ball.classList.remove('drag');
+      try { ball.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (moved) {
+        clamp();
+        save(); // 拖动结束: 记住用户自定义位置
       } else {
-        togglePanel();   // 原地点击: 展开/收起面板
+        togglePanel(); // 原地点击: 展开/收起面板
       }
     };
     ball.addEventListener('pointerup', up);
-    ball.addEventListener('pointercancel', up);
+    ball.addEventListener('pointercancel', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      ball.classList.remove('drag');
+      try { ball.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
     ball.addEventListener('dblclick', (e) => {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     window.addEventListener('resize', () => {
       if (!S.ballPos) {
-        S.ballPos = calcDefaultPPos();
+        S.ballPos = calcDefaultBallPos();
       }
       place();
     });
