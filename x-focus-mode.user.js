@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.13
+// @version      1.8.14
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
@@ -1015,28 +1015,33 @@
     const status = document.getElementById('fx-sync-status');
     const total = OFFICIAL_MUTE_KEYWORDS.length;
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const waitFor = async (fn, timeout = 4000, step = 100) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        const res = fn();
+        if (res) return res;
+        await sleep(step);
+      }
+      return null;
+    };
 
     // 获取当前账号的 CSRF Token (ct0)
     const getCookie = (name) => {
-      const match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[2]) : '';
+      const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]).replace(/^"|"$/g, '') : '';
     };
     const ct0 = getCookie('ct0');
     const bearer = 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
     let successCount = 0;
-    let useDomFallback = false;
+    let apiAvailable = false;
 
-    // 优先尝试内部原生 API 极速批量同步
-    for (let i = 0; i < total; i++) {
-      const kw = OFFICIAL_MUTE_KEYWORDS[i];
-      const pct = Math.round(((i + 1) / total) * 100);
-      bar.style.width = pct + '%';
-      status.textContent = `[${i + 1}/${total}] 正在同步: "${kw}"`;
-
+    // 1. 尝试使用 Twitter 内部原生 API 批量极速同步 (0.1秒/词)
+    if (ct0) {
       try {
-        const res = await fetch('https://x.com/i/api/1.1/mutes/keywords/create.json', {
+        const probeRes = await fetch('/i/api/1.1/mutes/keywords/create.json', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'authorization': bearer,
             'x-csrf-token': ct0,
@@ -1044,32 +1049,55 @@
             'x-twitter-auth-type': 'OAuth2Session',
             'content-type': 'application/x-www-form-urlencoded'
           },
-          body: `keyword=${encodeURIComponent(kw)}&mute_surfaces=home_timeline%2Cnotifications&mute_options=home_timeline%2Cnotifications&duration=0`
+          body: `keyword=${encodeURIComponent(OFFICIAL_MUTE_KEYWORDS[0])}&mute_surfaces=home_timeline%2Cnotifications&mute_options=home_timeline%2Cnotifications&duration=0`
         });
-
-        if (res.ok) {
+        // 200 = 添加成功, 400 = 已经屏蔽过 (说明 API 权限与接口完全有效)
+        if (probeRes.ok || probeRes.status === 400) {
+          apiAvailable = true;
           successCount++;
-        } else if (res.status === 404 || res.status === 403 || res.status === 401) {
-          useDomFallback = true;
-          break;
         }
-      } catch (err) {
-        useDomFallback = true;
-        break;
+      } catch (_) {
+        apiAvailable = false;
       }
-      await sleep(100);
     }
 
-    // 若 API 受限则走设置页 DOM 模拟自动输入
-    if (useDomFallback) {
+    if (apiAvailable) {
+      status.textContent = 'API 验证成功，正在极速批量写入...';
+      for (let i = 1; i < total; i++) {
+        const kw = OFFICIAL_MUTE_KEYWORDS[i];
+        const pct = Math.round(((i + 1) / total) * 100);
+        bar.style.width = pct + '%';
+        status.textContent = `[${i + 1}/${total}] 正在同步: "${kw}"`;
+
+        try {
+          const res = await fetch('/i/api/1.1/mutes/keywords/create.json', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'authorization': bearer,
+              'x-csrf-token': ct0,
+              'x-twitter-active-user': 'yes',
+              'x-twitter-auth-type': 'OAuth2Session',
+              'content-type': 'application/x-www-form-urlencoded'
+            },
+            body: `keyword=${encodeURIComponent(kw)}&mute_surfaces=home_timeline%2Cnotifications&mute_options=home_timeline%2Cnotifications&duration=0`
+          });
+          if (res.ok || res.status === 400) {
+            successCount++;
+          }
+        } catch (_) {}
+        await sleep(60);
+      }
+    } else {
+      // 2. 若 API 受限 (Twitter 启用客户端签名)，无缝走官方设置页 DOM 模拟输入
       if (!location.pathname.includes('/settings/muted_keywords') && !location.pathname.includes('/settings/add_muted_keyword')) {
-        status.textContent = 'API 受限，正在跳转至官方设置页进行模拟输入...';
-        await sleep(600);
+        status.textContent = '正在跳转至 Twitter 官方屏蔽词页面继续自动同步...';
+        await sleep(500);
         location.assign('/settings/muted_keywords#fx-auto-sync');
         return;
       }
 
-      status.textContent = '启用官方设置页自动输入中...';
+      status.textContent = '官方设置页已就绪，正在逐个自动录入...';
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
 
       for (let i = 0; i < total; i++) {
@@ -1078,32 +1106,43 @@
         bar.style.width = pct + '%';
         status.textContent = `[${i + 1}/${total}] 正在写入: "${kw}"`;
 
-        if (document.body.innerText.includes(kw)) {
-          successCount++;
-          continue;
+        // 步骤 1: 点击“添加屏蔽词”按钮
+        if (!location.pathname.includes('/settings/add_muted_keyword')) {
+          const addBtn = await waitFor(() => document.querySelector("a[href='/settings/add_muted_keyword'], a[href*='add_muted_keyword']"), 4000);
+          if (addBtn) addBtn.click();
         }
 
-        const addBtn = document.querySelector("a[href='/settings/add_muted_keyword']");
-        if (addBtn) addBtn.click();
-        await sleep(350);
+        // 步骤 2: 等待输入框加载
+        const input = await waitFor(() => document.querySelector("input[name='keyword']"), 4000);
+        if (!input) continue;
 
-        const input = document.querySelector("input[name='keyword']");
-        if (input) {
-          setter.call(input, kw);
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-          await sleep(100);
-          const saveBtn = document.querySelector("[data-testid='settingsDetailSave']");
-          if (saveBtn) saveBtn.click();
+        // 步骤 3: 填入词汇并触发 React 监听
+        setter.call(input, kw);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(150);
+
+        // 步骤 4: 保存或返回
+        const saveBtn = document.querySelector("[data-testid='settingsDetailSave']");
+        if (saveBtn && !saveBtn.disabled) {
+          saveBtn.click();
           successCount++;
-          await sleep(400);
+          await waitFor(() => !location.pathname.includes('/settings/add_muted_keyword') && document.querySelector("a[href*='add_muted_keyword']"), 4000);
+        } else {
+          // 若词汇已存在导致保存按钮不可用，点击返回按钮
+          const backBtn = document.querySelector("[data-testid='app-bar-back'], button[aria-label='Back'], button[aria-label='返回']");
+          if (backBtn) backBtn.click();
+          else history.back();
+          successCount++;
+          await waitFor(() => !location.pathname.includes('/settings/add_muted_keyword') && document.querySelector("a[href*='add_muted_keyword']"), 4000);
         }
+        await sleep(100);
       }
     }
 
     bar.style.width = '100%';
     status.innerHTML = `<span style="color:#00ba7c;font-weight:600">✅ 成功同步 ${successCount} 个垃圾词到 Twitter 官方账号！</span>`;
-    await sleep(1600);
+    await sleep(2000);
     hud.style.display = 'none';
     isSyncingMutes = false;
 
@@ -1139,7 +1178,7 @@
     });
 
     if (location.hash.includes('fx-auto-sync')) {
-      setTimeout(() => syncOfficialMuteKeywords(), 800);
+      setTimeout(() => syncOfficialMuteKeywords(), 1200);
     }
   }
 
