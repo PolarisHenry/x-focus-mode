@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.12
+// @version      1.8.13
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
@@ -91,15 +91,15 @@
   /* ---------------- 精选干货专栏检索配置 (高信噪比提纯 + 严拒政治与暴论) ---------------- */
   const CHANNELS = {
     all: {
-      name: '🔥 综合精选 (科技+商业+出海)',
+      name: '🔥 综合精选',
       q: `(AI OR 大模型 OR 独立开发 OR Cursor OR Claude OR "商业模式" OR "深度拆解" OR "出海" OR "MRR" OR "复盘" OR "方法论") min_faves:40 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     pure: {
-      name: '🌊 纯净漫游 (全网只做过滤)',
+      name: '🌊 纯净漫游',
       q: `(的 OR 了 OR 是 OR 在 OR 有) min_faves:40 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     knowledge: {
-      name: '🧠 随机知识 (跨领域探索·无垃圾)',
+      name: '🧠 随机跨领域知识',
       q: `("为什么" OR "原理" OR "机制" OR "原来如此" OR "科学" OR "宇宙" OR "历史" OR "心理学" OR "脑科学" OR "生物" OR "科普" OR "冷知识" OR "涨知识" OR "博弈论") min_faves:25 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     tech: {
@@ -107,7 +107,7 @@
       q: `(AI OR 大模型 OR 独立开发 OR LLM OR Claude OR Cursor OR "开源项目" OR "全栈" OR "架构设计") min_faves:30 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     cognition: {
-      name: '💡 商业深度拆解 & 思维模型',
+      name: '💡 商业深度拆解',
       q: `("商业思考" OR "商业模式" OR "深度拆解" OR "思维模型" OR "决策模型" OR "复盘" OR "方法论" OR "增长策略" OR "读书笔记") min_faves:35 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     money: {
@@ -1337,8 +1337,8 @@
         
         ${sec('精选干货专栏 (一键直达)')}
         <div class="fx-channel-grid">
-          <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选 (科技+商业+出海)</button>
-          <button type="button" class="fx-channel-btn highlight" data-channel="pure">🌊 纯净漫游 (全网只做过滤·无币圈)</button>
+          <button type="button" class="fx-channel-btn primary" data-channel="all">🔥 综合精选</button>
+          <button type="button" class="fx-channel-btn highlight" data-channel="pure">🌊 纯净漫游</button>
           <button type="button" class="fx-channel-btn" data-channel="knowledge">🧠 随机跨领域知识</button>
           <button type="button" class="fx-channel-btn" data-channel="tech">🤖 科技 & AI</button>
           <button type="button" class="fx-channel-btn" data-channel="cognition">💡 商业深度拆解</button>
@@ -1630,11 +1630,11 @@
     const modText = IS_MAC ? '快捷键 F 或 ⌥F' : '快捷键 Alt+F';
     add(`🎯 专注模式:${S.focus ? '开启中' : '已关闭'}(${modText})`, toggle('focus'));
     add(`🎛 悬浮设置面板(${IS_MAC ? '快捷键 P 或 ⌥P' : '快捷键 P 或 Alt+P'})`, togglePanel);
-    add('🔥 专栏: 综合精选 (科技+商业+出海)', () => openChannel('all'));
-    add('🌊 专栏: 纯净漫游 (全网只做过滤·无币圈)', () => openChannel('pure'));
-    add('🧠 专栏: 随机知识 (跨领域漫游·无垃圾)', () => openChannel('knowledge'));
+    add('🔥 专栏: 综合精选', () => openChannel('all'));
+    add('🌊 专栏: 纯净漫游', () => openChannel('pure'));
+    add('🧠 专栏: 随机跨领域知识', () => openChannel('knowledge'));
     add('🤖 专栏: 科技 & 前沿 AI', () => openChannel('tech'));
-    add('💡 专栏: 商业深度拆解 & 思维模型', () => openChannel('cognition'));
+    add('💡 专栏: 商业深度拆解', () => openChannel('cognition'));
     add('💰 专栏: 搞钱 & 独立出海', () => openChannel('money'));
     add(`🛡️ 一键同步垃圾词到 Twitter 官方屏蔽库 (${OFFICIAL_MUTE_KEYWORDS.length} 词)`, () => syncOfficialMuteKeywords());
     add(`🚫 彻底屏蔽币圈推广:${S.blockCrypto ? '已开启(无视Binance/合约)' : '已关闭'}`, toggle('blockCrypto'));
