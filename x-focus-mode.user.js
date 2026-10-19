@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.11
+// @version      1.8.12
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
@@ -80,7 +80,7 @@
   const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -反动 -汉奸 -走狗 -卖国贼 -境外势力 -美狗 -日杂 -辱华 -反华 -公知 -批斗 -洗地 -大外宣 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
 
   /* 强力屏蔽词: 黄推 / 低俗 / 色情 / 约炮 / 性病营销垃圾 */
-  const NSFW_EXCLUDES = '-梅毒 -艾滋 -做爱 -性病 -约炮 -操逼 -福利姬';
+  const NSFW_EXCLUDES = '-梅毒 -艾滋 -做爱 -卖逼 -操逼 -约炮 -性病 -福利姬 -看片 -骚货 -门事件 -卖淫 -嫖娼';
 
   /* 强力屏蔽词: 灰产割韭菜 / 营销号引流 */
   const SCAM_EXCLUDES = '-带徒弟 -私信我 -加微信 -日入 -月入十万';
@@ -124,8 +124,8 @@
   /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击、极端扣帽子 */
   const POLITICS_SPAM_REGEX = /(中共|共产党|中国共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|反动|反动派|汉奸|走狗|卖国贼|境外势力|美狗|日杂|辱华|反华|公知|阶级斗争|批斗|洗地|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|互害|贱民|大外宣)/i;
 
-  /* 强力屏蔽黄推/低俗/色情/约炮/性病营销垃圾 (梅毒/艾滋/做爱/约炮/擦边引流) */
-  const NSFW_SPAM_REGEX = /(梅毒|艾滋|做爱|性病|尖锐湿疣|淋病|约炮|约啪|操逼|骚逼|抽插|潮吹|颜射|淫水|射精|阴茎|阴道|裸照|裸聊|福利姬|门事件|吃瓜群|资源群|调教|露出|绿帽|偷拍|援交|嫖娼|迷奸|催情|换妻|兼职妹|楼凤|上门服务|破处|操我|反差婊|视频流出|探花|OnlyFans|onlyfans|门槛群)/i;
+  /* 强力屏蔽黄推/低俗/色情/约炮/性病营销垃圾 (梅毒/艾滋/做爱/卖逼/约炮/擦边引流) */
+  const NSFW_SPAM_REGEX = /(梅毒|艾滋|做爱|性爱|卖逼|操逼|骚逼|臭逼|欠操|操我|骚母狗|骚货|开房|打炮|约炮|约啪|炮友|性病|尖锐湿疣|淋病|卖淫|嫖娼|抽插|潮吹|颜射|淫水|射精|阴茎|阴道|裸照|裸聊|福利姬|门事件|吃瓜群|资源群|福利群|调教|露出|绿帽|偷拍|援交|援交妹|迷奸|催情|换妻|兼职妹|楼凤|上门服务|破处|反差婊|视频流出|探花|OnlyFans|onlyfans|门槛群|看片|黄片|自慰|手淫|口交|肛交)/i;
 
   /* ---------------- Twitter 官方屏蔽词库导入列表 (核心高频垃圾词) ---------------- */
   const OFFICIAL_MUTE_KEYWORDS = [
@@ -141,11 +141,13 @@
     '公知', '阶级斗争', '批斗', '洗地',
     '配得上你的苦难', '傻逼', '弱智', '脑残', '劣根性', '人矿', '互害', '贱民',
     // 黄推 / 低俗 / 色情 / 约炮 / 性病与低俗引流
-    '梅毒', '艾滋', '做爱', '性病', '尖锐湿疣', '淋病', '约炮', '约啪', '操逼', '骚逼',
-    '抽插', '潮吹', '颜射', '淫水', '射精', '阴茎', '阴道', '裸照', '裸聊', '福利姬',
-    '门事件', '吃瓜群', '资源群', '调教', '露出', '绿帽', '偷拍', '援交', '嫖娼',
-    '迷奸', '催情', '换妻', '兼职妹', '楼凤', '上门服务', '破处', '操我', '反差婊',
-    '视频流出', '探花', 'OnlyFans', '门槛群',
+    '梅毒', '艾滋', '做爱', '性爱', '卖逼', '操逼', '骚逼', '臭逼', '欠操', '操我',
+    '骚母狗', '骚货', '开房', '打炮', '约炮', '约啪', '炮友', '性病', '尖锐湿疣',
+    '淋病', '卖淫', '嫖娼', '抽插', '潮吹', '颜射', '淫水', '射精', '阴茎', '阴道',
+    '裸照', '裸聊', '福利姬', '门事件', '吃瓜群', '资源群', '福利群', '调教', '露出',
+    '绿帽', '偷拍', '援交', '援交妹', '迷奸', '催情', '换妻', '兼职妹', '楼凤',
+    '上门服务', '破处', '反差婊', '视频流出', '探花', 'OnlyFans', '门槛群', '看片',
+    '黄片', '自慰', '手淫', '口交', '肛交',
     // 灰产引流
     '带徒弟', '私信我', '加微信', '日入', '月入十万'
   ];
@@ -929,8 +931,7 @@
     const shouldFilterTopic = S.focus && S.topicFilter;
 
     document.querySelectorAll('article[data-testid="tweet"]').forEach((el) => {
-      const wrap = el.closest('div[data-testid="cellInnerDiv"]');
-      if (!wrap) return;
+      const wrap = el.closest('div[data-testid="cellInnerDiv"]') || el;
 
       if (!shouldBlockCrypto && !shouldBlockPolitics && !shouldBlockNsfw && !shouldFilterTopic) {
         if (wrap.dataset.fxFiltered) {
@@ -941,24 +942,26 @@
       }
 
       const textEl = el.querySelector('div[data-testid="tweetText"]');
-      const text = textEl ? textEl.innerText : '';
+      const tweetText = textEl ? textEl.innerText : '';
+      // 综合检索整张推文卡片(包含作者名/句柄/引用推文/正文)，防止博主将“卖逼/约炮”置于昵称或引用中钻空子
+      const fullText = `${tweetText}\n${el.innerText || ''}`;
 
       // 1. 币圈 / Binance / 合约 / 空投等垃圾直接一票否决
-      if (shouldBlockCrypto && text && CRYPTO_SPAM_REGEX.test(text)) {
+      if (shouldBlockCrypto && CRYPTO_SPAM_REGEX.test(fullText)) {
         wrap.style.display = 'none';
         wrap.dataset.fxFiltered = 'crypto';
         return;
       }
 
       // 2. 政治口水战 / 键政暴论 / 情绪发泄与恶毒谩骂直接一票否决
-      if (shouldBlockPolitics && text && POLITICS_SPAM_REGEX.test(text)) {
+      if (shouldBlockPolitics && POLITICS_SPAM_REGEX.test(fullText)) {
         wrap.style.display = 'none';
         wrap.dataset.fxFiltered = 'politics';
         return;
       }
 
       // 3. 黄推 / 低俗 / 色情 / 约炮 / 性病营销垃圾直接一票否决
-      if (shouldBlockNsfw && text && NSFW_SPAM_REGEX.test(text)) {
+      if (shouldBlockNsfw && NSFW_SPAM_REGEX.test(fullText)) {
         wrap.style.display = 'none';
         wrap.dataset.fxFiltered = 'nsfw';
         return;
@@ -966,7 +969,7 @@
 
       // 4. 主题过滤 (仅当开启 topicFilter 时)
       if (shouldFilterTopic) {
-        if (text && !TOPIC_REGEX.test(text)) {
+        if (tweetText && !TOPIC_REGEX.test(tweetText)) {
           wrap.style.display = 'none';
           wrap.dataset.fxFiltered = 'topic';
           return;
@@ -1366,7 +1369,7 @@
         ${sec('垃圾内容深度清剿')}
         ${row('blockCrypto', '彻底屏蔽币圈推广', '无视Binance/合约/空投', false)}
         ${row('blockPolitics', '彻底屏蔽政治暴论', '无视键政/吵架/戾气', false)}
-        ${row('blockNsfw', '彻底屏蔽黄推与低俗', '无视梅毒/艾滋/做爱/约炮', false)}
+        ${row('blockNsfw', '彻底屏蔽黄推与低俗', '无视梅毒/艾滋/做爱/卖逼/约炮', false)}
         ${row('topicFilter', '时间线主题过滤', '只看科技/商业/出海', dim)}
 
         ${sec('Twitter 官方屏蔽词库联动')}
