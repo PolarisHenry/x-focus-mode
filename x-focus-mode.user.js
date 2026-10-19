@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.10
-// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
+// @version      1.8.11
+// @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
@@ -44,6 +44,7 @@
     tabCloak: false,   // 标签页伪装: 将标题与图标伪装为 Google 文档
     blockCrypto: true, // 彻底屏蔽币圈推广: 无视 Binance/币安/炒币/合约/空投/代币引流
     blockPolitics: true,// 彻底屏蔽政治暴论与口水战: 净化认知、键政、戾气发泄与恶毒谩骂
+    blockNsfw: true,   // 彻底屏蔽黄推与低俗: 净化梅毒/艾滋/做爱/约炮/色情/性病营销
     topicFilter: false,// 时间线主题过滤: 仅显示科技/认知/搞钱相关推文
     progressBar: true, // 屏幕顶端极细阅读滚动进度条
     pureBlack: false,  // OLED 纯黑极简背景
@@ -60,6 +61,12 @@
     stored._v185_migrated = true;
     try { GM_setValue('fxState', stored); } catch (_) {}
   }
+  // v1.8.11 迁移: 默认启用黄推/低俗与性病营销屏蔽
+  if (!stored._v1811_migrated) {
+    if (stored.blockNsfw === undefined) stored.blockNsfw = true;
+    stored._v1811_migrated = true;
+    try { GM_setValue('fxState', stored); } catch (_) {}
+  }
   const S = Object.assign({}, DEFAULTS, stored);
   const save = () => GM_setValue('fxState', S);
 
@@ -70,13 +77,16 @@
   const CRYPTO_EXCLUDES = '-Binance -币安 -BNB -OKX -欧易 -crypto -空投 -撸毛 -代币 -Token -合约 -做空 -做多 -土狗 -铭文 -符文 -以太坊 -比特币 -BTC -ETH -SOL -返佣 -爆仓 -打新 -airdrop';
 
   /* 强力屏蔽词: 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 / 极端扣帽子 (彻底过滤垃圾内容) */
-  const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -中国共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -反动 -反动派 -汉奸 -走狗 -卖国贼 -境外势力 -美狗 -日杂 -辱华 -反华 -公知 -阶级斗争 -批斗 -洗地 -大外宣 -配得上你的苦难 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
+  const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -反动 -汉奸 -走狗 -卖国贼 -境外势力 -美狗 -日杂 -辱华 -反华 -公知 -批斗 -洗地 -大外宣 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
+
+  /* 强力屏蔽词: 黄推 / 低俗 / 色情 / 约炮 / 性病营销垃圾 */
+  const NSFW_EXCLUDES = '-梅毒 -艾滋 -做爱 -性病 -约炮 -操逼 -福利姬';
 
   /* 强力屏蔽词: 灰产割韭菜 / 营销号引流 */
   const SCAM_EXCLUDES = '-带徒弟 -私信我 -加微信 -日入 -月入十万';
 
   /* 聚合清洗排除词 (全专栏生效) */
-  const NOISE_EXCLUDES = `${CRYPTO_EXCLUDES} ${POLITICS_AND_RANT_EXCLUDES} ${SCAM_EXCLUDES}`;
+  const NOISE_EXCLUDES = `${CRYPTO_EXCLUDES} ${POLITICS_AND_RANT_EXCLUDES} ${NSFW_EXCLUDES} ${SCAM_EXCLUDES}`;
 
   /* ---------------- 精选干货专栏检索配置 (高信噪比提纯 + 严拒政治与暴论) ---------------- */
   const CHANNELS = {
@@ -90,7 +100,7 @@
     },
     knowledge: {
       name: '🧠 随机知识 (跨领域探索·无垃圾)',
-      q: `("为什么" OR "原理" OR "机制" OR "原来如此" OR "科学" OR "宇宙" OR "历史" OR "心理学" OR "脑科学" OR "生物" OR "进化" OR "科普" OR "冷知识" OR "涨知识" OR "研究表明" OR "博弈论") min_faves:25 lang:zh -is:retweet ${NOISE_EXCLUDES}`
+      q: `("为什么" OR "原理" OR "机制" OR "原来如此" OR "科学" OR "宇宙" OR "历史" OR "心理学" OR "脑科学" OR "生物" OR "科普" OR "冷知识" OR "涨知识" OR "博弈论") min_faves:25 lang:zh -is:retweet ${NOISE_EXCLUDES}`
     },
     tech: {
       name: '🤖 科技 & 前沿 AI',
@@ -114,6 +124,9 @@
   /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击、极端扣帽子 */
   const POLITICS_SPAM_REGEX = /(中共|共产党|中国共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|反动|反动派|汉奸|走狗|卖国贼|境外势力|美狗|日杂|辱华|反华|公知|阶级斗争|批斗|洗地|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|互害|贱民|大外宣)/i;
 
+  /* 强力屏蔽黄推/低俗/色情/约炮/性病营销垃圾 (梅毒/艾滋/做爱/约炮/擦边引流) */
+  const NSFW_SPAM_REGEX = /(梅毒|艾滋|做爱|性病|尖锐湿疣|淋病|约炮|约啪|操逼|骚逼|抽插|潮吹|颜射|淫水|射精|阴茎|阴道|裸照|裸聊|福利姬|门事件|吃瓜群|资源群|调教|露出|绿帽|偷拍|援交|嫖娼|迷奸|催情|换妻|兼职妹|楼凤|上门服务|破处|操我|反差婊|视频流出|探花|OnlyFans|onlyfans|门槛群)/i;
+
   /* ---------------- Twitter 官方屏蔽词库导入列表 (核心高频垃圾词) ---------------- */
   const OFFICIAL_MUTE_KEYWORDS = [
     // 币圈 / 炒币 / 合约 / 交易所 / 空投引流
@@ -127,6 +140,12 @@
     '反动', '反动派', '汉奸', '走狗', '卖国贼', '境外势力', '美狗', '日杂', '辱华', '反华',
     '公知', '阶级斗争', '批斗', '洗地',
     '配得上你的苦难', '傻逼', '弱智', '脑残', '劣根性', '人矿', '互害', '贱民',
+    // 黄推 / 低俗 / 色情 / 约炮 / 性病与低俗引流
+    '梅毒', '艾滋', '做爱', '性病', '尖锐湿疣', '淋病', '约炮', '约啪', '操逼', '骚逼',
+    '抽插', '潮吹', '颜射', '淫水', '射精', '阴茎', '阴道', '裸照', '裸聊', '福利姬',
+    '门事件', '吃瓜群', '资源群', '调教', '露出', '绿帽', '偷拍', '援交', '嫖娼',
+    '迷奸', '催情', '换妻', '兼职妹', '楼凤', '上门服务', '破处', '操我', '反差婊',
+    '视频流出', '探花', 'OnlyFans', '门槛群',
     // 灰产引流
     '带徒弟', '私信我', '加微信', '日入', '月入十万'
   ];
@@ -902,17 +921,18 @@
     }
   }
 
-  /* ---------------- 时间线本地高能主题与垃圾过滤 (币圈/政治/暴论) ---------------- */
+  /* ---------------- 时间线本地高能主题与垃圾过滤 (币圈/政治/暴论/黄推/低俗) ---------------- */
   function filterTimelineTweets() {
     const shouldBlockCrypto = S.focus && S.blockCrypto;
     const shouldBlockPolitics = S.focus && S.blockPolitics;
+    const shouldBlockNsfw = S.focus && S.blockNsfw;
     const shouldFilterTopic = S.focus && S.topicFilter;
 
     document.querySelectorAll('article[data-testid="tweet"]').forEach((el) => {
       const wrap = el.closest('div[data-testid="cellInnerDiv"]');
       if (!wrap) return;
 
-      if (!shouldBlockCrypto && !shouldBlockPolitics && !shouldFilterTopic) {
+      if (!shouldBlockCrypto && !shouldBlockPolitics && !shouldBlockNsfw && !shouldFilterTopic) {
         if (wrap.dataset.fxFiltered) {
           wrap.style.display = '';
           delete wrap.dataset.fxFiltered;
@@ -937,7 +957,14 @@
         return;
       }
 
-      // 3. 主题过滤 (仅当开启 topicFilter 时)
+      // 3. 黄推 / 低俗 / 色情 / 约炮 / 性病营销垃圾直接一票否决
+      if (shouldBlockNsfw && text && NSFW_SPAM_REGEX.test(text)) {
+        wrap.style.display = 'none';
+        wrap.dataset.fxFiltered = 'nsfw';
+        return;
+      }
+
+      // 4. 主题过滤 (仅当开启 topicFilter 时)
       if (shouldFilterTopic) {
         if (text && !TOPIC_REGEX.test(text)) {
           wrap.style.display = 'none';
@@ -1097,7 +1124,7 @@
       <div class="fx-sync-banner-content">
         <div class="fx-sync-banner-text">
           <strong>🛡️ X 专注阅读模式 · 官方屏蔽词一键同步</strong>
-          <span>一键将 ${OFFICIAL_MUTE_KEYWORDS.length} 个币圈炒币、合约、空投引流、反动及政治口水垃圾词批量写入你的 Twitter 账号。</span>
+          <span>一键将 ${OFFICIAL_MUTE_KEYWORDS.length} 个币圈炒币、合约、空投引流、黄推低俗、反动及政治口水垃圾词批量写入你的 Twitter 账号。</span>
         </div>
         <button id="fx-sync-banner-btn" type="button">⚡️ 一键自动同步 (${OFFICIAL_MUTE_KEYWORDS.length} 个垃圾词)</button>
       </div>
@@ -1339,12 +1366,13 @@
         ${sec('垃圾内容深度清剿')}
         ${row('blockCrypto', '彻底屏蔽币圈推广', '无视Binance/合约/空投', false)}
         ${row('blockPolitics', '彻底屏蔽政治暴论', '无视键政/吵架/戾气', false)}
+        ${row('blockNsfw', '彻底屏蔽黄推与低俗', '无视梅毒/艾滋/做爱/约炮', false)}
         ${row('topicFilter', '时间线主题过滤', '只看科技/商业/出海', dim)}
 
         ${sec('Twitter 官方屏蔽词库联动')}
         <div class="fx-action-card">
           <div class="fx-action-title">🛡️ 官方屏蔽词库一键同步</div>
-          <div class="fx-action-desc">将 ${OFFICIAL_MUTE_KEYWORDS.length} 个高频币圈、反动与政治口水词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
+          <div class="fx-action-desc">将 ${OFFICIAL_MUTE_KEYWORDS.length} 个高频币圈、反动、黄推及政治口水词批量同步至 Twitter 账号屏蔽库，全平台（含手机端）永久净化。</div>
           <button type="button" id="fx-sync-mutes-btn" class="fx-btn-action">⚡️ 立即一键同步 (${OFFICIAL_MUTE_KEYWORDS.length} 个垃圾词)</button>
         </div>
       `;
@@ -1608,6 +1636,7 @@
     add(`🛡️ 一键同步垃圾词到 Twitter 官方屏蔽库 (${OFFICIAL_MUTE_KEYWORDS.length} 词)`, () => syncOfficialMuteKeywords());
     add(`🚫 彻底屏蔽币圈推广:${S.blockCrypto ? '已开启(无视Binance/合约)' : '已关闭'}`, toggle('blockCrypto'));
     add(`🚫 彻底屏蔽政治暴论:${S.blockPolitics ? '已开启(无视键政/吵架)' : '已关闭'}`, toggle('blockPolitics'));
+    add(`🚫 彻底屏蔽黄推低俗:${S.blockNsfw ? '已开启(无视色情/性病)' : '已关闭'}`, toggle('blockNsfw'));
     add(`🎯 时间线主题过滤:${S.topicFilter ? '已开启(只看相关)' : '已关闭'}`, toggle('topicFilter'));
     add(`💼 老板键伪装(${IS_MAC ? '单键 B 或 ⌥B' : '单键 B 或 Alt+B'})`, () => {
       toggleBossKey();
@@ -1717,7 +1746,7 @@
       pending = false;
       if (!document.body) return;
       applyTabCloak();
-      if (S.blockCrypto || S.topicFilter) filterTimelineTweets();
+      if (S.blockCrypto || S.blockPolitics || S.blockNsfw || S.topicFilter) filterTimelineTweets();
       syncLeftHeader(); // X 重建 header 后重新隐藏/恢复
       if (S.showBall && !document.getElementById('fx-ball')) mountBall();
       if (document.body.classList.contains('fx-search') && !document.getElementById('fx-search-trigger')) {
