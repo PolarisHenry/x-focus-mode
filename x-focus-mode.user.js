@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.18
+// @version      1.8.19
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABtElEQVR4nO1WbRGDMAzNpgAJlTAJSKgD5oA5AAfMweagEiYBCUiYhO5ej3BdF0rL2PFnucsdpB95zUvSHojI0o5y3NP5H4AYAWMMWWtF1Vpnh7jv+8W11teiKOwwDPb5fNq2bSfFP1Qp9TY/pl3XWQjWR+bRh7EsS7fwcrlMtvP57GyPxyPJedM0Kc6tCAB6vV7dBqfTabLd7/cPYJLWde3mGWNSwJI4wFRA8R3SM0cFAEP8dasAkEcFuAxtEhUAxaAzcoWiE5gKOA5tPhXsPDdRaWkCwtj3/QcVsLEz/g+BbgKAPF79pIINAOD4drslJedqAETkNg+dsC2x3L4DQEQu8UKOYVsZ+nwASikHwK8AtmWU3XoAtECFX64/A6DGE4ddEgn6syqgUf1yC8Mudc7NAZjxlAi5FHapc24GoBFuNyns3CW11tsBaEbn2Dznwvr6MiIidxIIuJfGOezohmHnTHw70OygX+OxC4bDXlVVtFyzAKiMq3XunSB1ziQAxbhhWOsxld4JUudMAmC8ckvM5DcqkA/8mOW+EdmLxIxfc7v5kQtljooDo9hLjns6/wNACF5ee4a//R4OiQAAAABJRU5ErkJggg==
@@ -72,7 +72,7 @@
   const DOCS_TITLE = 'Google 文档 - 2026 Q4 业务架构与跨系统协同方案演进规划';
 
   /* 强力屏蔽词: 币圈 / 炒币 / 合约 / 交易所 / 空投引流 */
-  const CRYPTO_EXCLUDES = '-Binance -币安 -BNB -OKX -欧易 -crypto -空投 -撸毛 -代币 -Token -合约 -做空 -做多 -土狗 -铭文 -符文 -以太坊 -比特币 -BTC -ETH -SOL -返佣 -爆仓 -打新 -airdrop';
+  const CRYPTO_EXCLUDES = '-Binance -币安 -BNB -OKX -欧易 -crypto -空投 -撸毛 -代币 -合约 -做空 -做多 -土狗 -铭文 -符文 -以太坊 -比特币 -BTC -ETH -SOL -返佣 -爆仓 -打新 -airdrop';
 
   /* 强力屏蔽词: 政治口水战 / 键政暴论 / 情绪发泄 / 恶毒谩骂 / 极端扣帽子 (彻底过滤垃圾内容) */
   const POLITICS_AND_RANT_EXCLUDES = '-政治 -政权 -中共 -共产党 -习近平 -川普 -特朗普 -大选 -独裁 -专制 -民主 -体制 -洗脑 -支那 -支人 -粉红 -五毛 -反贼 -润人 -反动 -汉奸 -走狗 -卖国贼 -境外势力 -美狗 -日杂 -辱华 -反华 -公知 -批斗 -洗地 -大外宣 -傻逼 -弱智 -脑残 -劣根性 -人矿 -互害 -贱民';
@@ -116,8 +116,8 @@
 
   const TOPIC_REGEX = /(AI|大模型|LLM|Claude|Cursor|GPT|开源|架构|编程|代码|算法|前端|后端|全栈|SaaS|商业模式|思维模型|决策模型|复盘|复利|方法论|读书笔记|搞钱|副业|出海|变现|盈利|MRR|营收|独立开发|冷启动|产品经理|增长|科技|冷知识|科普|涨知识)/i;
 
-  /* 强力屏蔽币圈/赌博/交易所引流垃圾 (Binance/OKX/合约/代币/空投) */
-  const CRYPTO_SPAM_REGEX = /(Binance|币安|BNB|OKX|欧易|Huobi|火币|Gate\.io|空投|撸毛|代币|Token|Memecoin|meme币|土狗|铭文|符文|合约|做多|做空|跟单|带单|爆仓|平仓|以太坊|比特币|\bBTC\b|\bETH\b|\bSOL\b|\bUSDT\b|web3|Web3|区块链|质押|挖矿|返佣|邀请码|百倍币|千倍币|airdrop)/i;
+  /* 屏蔽明确的币圈词；token 同时用于 AI 上下文、计费和身份认证，不能单独作为屏蔽依据。 */
+  const CRYPTO_SPAM_REGEX = /(Binance|币安|BNB|OKX|欧易|Huobi|火币|Gate\.io|空投|撸毛|代币|Memecoin|meme币|土狗|铭文|符文|合约|做多|做空|跟单|带单|爆仓|平仓|以太坊|比特币|\bBTC\b|\bETH\b|\bSOL\b|\bUSDT\b|web3|Web3|区块链|质押|挖矿|返佣|邀请码|百倍币|千倍币|airdrop)/i;
 
   /* 强力屏蔽政治口水战、键政暴论、情绪发泄、人身攻击、极端扣帽子 */
   const POLITICS_SPAM_REGEX = /(中共|共产党|中国共产党|习近平|川普|特朗普|独裁|专制|民主宪政|支那|支人|粉红|五毛|反贼|殖人|润人|反动|反动派|汉奸|走狗|卖国贼|境外势力|美狗|日杂|辱华|反华|公知|阶级斗争|批斗|洗地|体制内|体制外|洗脑|配得上你的苦难|傻逼|弱智|脑残|劣根性|人矿|互害|贱民|大外宣)/i;
@@ -128,7 +128,7 @@
   /* ---------------- Twitter 官方屏蔽词库导入列表 (核心高频垃圾词) ---------------- */
   const OFFICIAL_MUTE_KEYWORDS = [
     // 币圈 / 炒币 / 合约 / 交易所 / 空投引流
-    'Binance', '币安', 'BNB', 'OKX', '欧易', 'crypto', '空投', '撸毛', '代币', 'Token',
+    'Binance', '币安', 'BNB', 'OKX', '欧易', 'crypto', '空投', '撸毛', '代币',
     '合约', '做空', '做多', '土狗', '铭文', '符文', '以太坊', '比特币', 'BTC', 'ETH',
     'SOL', 'USDT', '返佣', '爆仓', '打新', 'airdrop', 'Memecoin', '跟单', '带单',
     '百倍币', '千倍币', '质押', 'Huobi', '火币',
