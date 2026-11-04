@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.19
+// @version      1.8.20
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABtElEQVR4nO1WbRGDMAzNpgAJlTAJSKgD5oA5AAfMweagEiYBCUiYhO5ej3BdF0rL2PFnucsdpB95zUvSHojI0o5y3NP5H4AYAWMMWWtF1Vpnh7jv+8W11teiKOwwDPb5fNq2bSfFP1Qp9TY/pl3XWQjWR+bRh7EsS7fwcrlMtvP57GyPxyPJedM0Kc6tCAB6vV7dBqfTabLd7/cPYJLWde3mGWNSwJI4wFRA8R3SM0cFAEP8dasAkEcFuAxtEhUAxaAzcoWiE5gKOA5tPhXsPDdRaWkCwtj3/QcVsLEz/g+BbgKAPF79pIINAOD4drslJedqAETkNg+dsC2x3L4DQEQu8UKOYVsZ+nwASikHwK8AtmWU3XoAtECFX64/A6DGE4ddEgn6syqgUf1yC8Mudc7NAZjxlAi5FHapc24GoBFuNyns3CW11tsBaEbn2Dznwvr6MiIidxIIuJfGOezohmHnTHw70OygX+OxC4bDXlVVtFyzAKiMq3XunSB1ziQAxbhhWOsxld4JUudMAmC8ckvM5DcqkA/8mOW+EdmLxIxfc7v5kQtljooDo9hLjns6/wNACF5ee4a//R4OiQAAAABJRU5ErkJggg==
@@ -927,16 +927,34 @@
     return match ? match[1] : null;
   }
 
-  function isCurrentTweet(el, statusId) {
-    if (!statusId) return false;
-    // 用推文本身的时间戳链接核对 ID，不能把引用卡片或正文里的链接当作主推文。
-    return Array.from(el.querySelectorAll('a[href*="/status/"]')).some((link) => {
-      if (!link.querySelector('time') ||
-          link.closest('article[data-testid="tweet"]') !== el ||
-          link.parentElement.closest('[role="link"], [data-testid="quoteTweet"]')) return false;
-      return getStatusId(new URL(link.href, location.href).pathname) === statusId;
-    });
+  // 按推文 ID 保存主动阅读状态，兼容 X 重新渲染或回收时间线节点。
+  const expandedTweetIds = new Set();
+  const expandedTweetNodes = new WeakMap();
+
+  function getTweetStatusIds(el) {
+    // 只认推文本身的时间戳链接，避免引用卡片或正文链接获得阅读保护。
+    return Array.from(el.querySelectorAll('a[href*="/status/"]')).filter((link) =>
+      link.querySelector('time') &&
+      link.closest('article[data-testid="tweet"]') === el &&
+      !link.parentElement.closest('[role="link"], [data-testid="quoteTweet"]')
+    ).map((link) => getStatusId(new URL(link.href, location.href).pathname)).filter(Boolean);
   }
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : event.target.parentElement;
+    if (!target) return;
+    const control = target.closest('[data-testid="tweet-text-show-more-link"], a, button, [role="button"]');
+    if (!control) return;
+    const isExpand = control.matches('[data-testid="tweet-text-show-more-link"]') ||
+      /^(显示更多|顯示更多|展开|展開|阅读更多|閱讀更多|show more|read more)$/i.test(control.textContent.trim());
+    if (!isExpand) return;
+    const tweet = control.closest('article[data-testid="tweet"]');
+    if (!tweet) return;
+    const ids = getTweetStatusIds(tweet);
+    ids.forEach((id) => expandedTweetIds.add(id));
+    expandedTweetNodes.set(tweet, ids.join(','));
+    // 捕获阶段先记录，再由 X 展开正文；后续 DOM 扫描不会隐藏正在读的内容。
+  }, true);
 
   function filterTimelineTweets() {
     const currentStatusId = getStatusId(location.pathname);
@@ -950,9 +968,12 @@
       if (el.parentElement.closest('article[data-testid="tweet"]')) return;
       const wrap = el.closest('div[data-testid="cellInnerDiv"]') || el;
 
-      // 用户主动打开的主推文始终可读，包括“显示更多”展开后的全文。
+      const tweetIds = getTweetStatusIds(el);
+      const isReading = tweetIds.some((id) => id === currentStatusId || expandedTweetIds.has(id)) ||
+        (expandedTweetNodes.has(el) && expandedTweetNodes.get(el) === tweetIds.join(','));
+      // 详情页主推文及用户主动展开的推文始终可读。
       // 同时清理 SPA 跳转/节点复用时残留的隐藏状态；回复和推荐推文继续正常过滤。
-      if (isCurrentTweet(el, currentStatusId) ||
+      if (isReading ||
           (!shouldBlockCrypto && !shouldBlockPolitics && !shouldBlockNsfw && !shouldFilterTopic)) {
         if (wrap.dataset.fxFiltered) {
           wrap.style.display = '';
