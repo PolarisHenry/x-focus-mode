@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.16
+// @version      1.8.17
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
@@ -12,8 +12,6 @@
 // @supportURL   https://github.com/PolarisHenry/x-focus-mode/issues
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @grant        GM_registerMenuCommand
-// @grant        GM_unregisterMenuCommand
 // @run-at       document-start
 // @noframes
 // @license      MIT
@@ -52,7 +50,6 @@
     activeTab: 'feed', // 当前激活的面板标签: 'feed' 专栏漫游, 'filter' 深度过滤, 'ui' 界面控制
   };
   const WIDTH_PRESETS = [750, 900, 1050, 1200];
-  const WIDTHS = [600, 700, 800, 900, 1000, 1100, 1200];
 
   const stored = GM_getValue('fxState', {});
   // v1.8.5 迁移: 默认启用政治暴论与口水战屏蔽，重构认知与商业检索专栏
@@ -1313,21 +1310,21 @@
         const row = e.target.closest('[data-k]');
         if (row) {
           const k = row.dataset.k;
-          S[k] = !S[k]; save(); apply(); rebuildMenu(); renderPanel();
+          S[k] = !S[k]; save(); apply(); renderPanel();
           return;
         }
         // 排版舒适度分段切换
         const seg = e.target.closest('[data-typo]');
         if (seg) {
           S.typoLevel = +seg.dataset.typo;
-          save(); apply(); rebuildMenu(); renderPanel();
+          save(); apply(); renderPanel();
           return;
         }
         // 宽度快捷挡位药丸
         const pill = e.target.closest('[data-w]');
         if (pill) {
           S.width = +pill.dataset.w;
-          save(); apply(); rebuildMenu(); renderPanel();
+          save(); apply(); renderPanel();
           return;
         }
         // 顶部多Tab切换
@@ -1354,7 +1351,7 @@
         if (e.target.closest('#fx-reset')) {
           const keepPos = S.ballPos; // 位置不重置
           Object.assign(S, DEFAULTS, { ballPos: keepPos });
-          save(); apply(); rebuildMenu(); renderPanel(); repositionPanel();
+          save(); apply(); renderPanel(); repositionPanel();
           return;
         }
         if (e.target.closest('#fx-close')) closePanel();
@@ -1370,7 +1367,6 @@
           });
         }
       });
-      p.addEventListener('change', () => rebuildMenu()); // 滑杆松手后同步菜单文案
     }
     return p;
   }
@@ -1679,58 +1675,6 @@
     }
   }, true);
 
-  /* ---------------- 油猴菜单 ---------------- */
-  const menuIds = [];
-  function rebuildMenu() {
-    while (menuIds.length) { try { GM_unregisterMenuCommand(menuIds.pop()); } catch (_) {} }
-    const add = (label, fn) => { try { menuIds.push(GM_registerMenuCommand(label, fn)); } catch (_) {} };
-    const toggle = (key) => () => {
-      S[key] = !S[key]; save(); apply(); rebuildMenu(); syncPanel();
-    };
-
-    const modText = IS_MAC ? '快捷键 F 或 ⌥F' : '快捷键 Alt+F';
-    add(`🎯 专注模式:${S.focus ? '开启中' : '已关闭'}(${modText})`, toggle('focus'));
-    add(`🎛 悬浮设置面板(${IS_MAC ? '快捷键 P 或 ⌥P' : '快捷键 P 或 Alt+P'})`, togglePanel);
-    add('🔥 专栏: 综合精选', () => openChannel('all'));
-    add('🌊 专栏: 纯净漫游', () => openChannel('pure'));
-    add('🧠 专栏: 随机跨领域知识', () => openChannel('knowledge'));
-    add('🤖 专栏: 科技 & 前沿 AI', () => openChannel('tech'));
-    add('💡 专栏: 商业深度拆解', () => openChannel('cognition'));
-    add('💰 专栏: 搞钱 & 独立出海', () => openChannel('money'));
-    add(`🛡️ 一键同步垃圾词到 Twitter 官方屏蔽库 (${OFFICIAL_MUTE_KEYWORDS.length} 词)`, () => syncOfficialMuteKeywords());
-    add(`🚫 彻底屏蔽币圈推广:${S.blockCrypto ? '已开启(无视Binance/合约)' : '已关闭'}`, toggle('blockCrypto'));
-    add(`🚫 彻底屏蔽政治暴论:${S.blockPolitics ? '已开启(无视键政/吵架)' : '已关闭'}`, toggle('blockPolitics'));
-    add(`🚫 彻底屏蔽黄推低俗:${S.blockNsfw ? '已开启(无视色情/性病)' : '已关闭'}`, toggle('blockNsfw'));
-    add(`🎯 时间线主题过滤:${S.topicFilter ? '已开启(只看相关)' : '已关闭'}`, toggle('topicFilter'));
-    add(`💼 老板键伪装(${IS_MAC ? '单键 B 或 ⌥B' : '单键 B 或 Alt+B'})`, () => {
-      toggleBossKey();
-    });
-    add(`📑 标签页伪装:${S.tabCloak ? '已开启(Google文档)' : '已关闭'}`, toggle('tabCloak'));
-    add(`🥷 摸鱼低调模式:${S.stealthMode ? '已开启(头像降噪)' : '已关闭'}`, toggle('stealthMode'));
-    add(`🔍 呼出搜索栏(${IS_MAC ? '单键 S 或 ⌥S' : '单键 S 或 Alt+S'})`, () => {
-      openSpotlight();
-    });
-    add(`📖 排版模式:${TYPO_LEVELS[S.typoLevel].label}(点击循环)`, () => {
-      S.typoLevel = (S.typoLevel + 1) % TYPO_LEVELS.length;
-      save(); apply(); rebuildMenu(); syncPanel();
-    });
-    add(`🧭 左侧导航:${S.hideLeft ? '隐藏中' : '显示中'}`, toggle('hideLeft'));
-    add(`📊 右侧栏:${S.hideRight ? '隐藏中' : '显示中'}`, toggle('hideRight'));
-    add(`🙈 媒体防窥模糊:${S.mediaBlur ? '已开启' : '已关闭'}`, toggle('mediaBlur'));
-    add(`🖤 OLED 纯黑背景:${S.pureBlack ? '已开启' : '已关闭'}`, toggle('pureBlack'));
-    add(`📏 顶部阅读进度条:${S.progressBar ? '显示中' : '已隐藏'}`, toggle('progressBar'));
-    add(`🔍 右上角常驻搜索胶囊:${S.keepSearch ? '已保留' : '不保留(默认)'}`, toggle('keepSearch'));
-    add(`🔘 悬浮设置球:${S.showBall ? '显示中' : '已隐藏'}`, toggle('showBall'));
-    add(`↔️ 内容列宽:${S.width}px(点击循环 600→1200)`, () => {
-      const i = WIDTHS.indexOf(S.width);
-      S.width = WIDTHS[(i + 1 + WIDTHS.length) % WIDTHS.length];
-      save(); apply(); rebuildMenu(); syncPanel();
-    });
-    add(`⬆️ 回到页面顶部(${IS_MAC ? '按键 T 或 双击悬浮球' : 'Alt+T / 双击悬浮球'})`, () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  }
-
   /* ---------------- 快捷键(Mac友好:支持单键及⌥/Alt组合键) ---------------- */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -1776,7 +1720,7 @@
         togglePanel();
       } else if (k === 'f') {
         e.preventDefault();
-        S.focus = !S.focus; save(); apply(); rebuildMenu(); syncPanel();
+        S.focus = !S.focus; save(); apply(); syncPanel();
       } else if (k === 's') {
         e.preventDefault();
         openSpotlight();
@@ -1826,5 +1770,4 @@
   } else {
     apply();
   }
-  rebuildMenu();
 })();
