@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.17
+// @version      1.8.18
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
+// @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABtElEQVR4nO1WbRGDMAzNpgAJlTAJSKgD5oA5AAfMweagEiYBCUiYhO5ej3BdF0rL2PFnucsdpB95zUvSHojI0o5y3NP5H4AYAWMMWWtF1Vpnh7jv+8W11teiKOwwDPb5fNq2bSfFP1Qp9TY/pl3XWQjWR+bRh7EsS7fwcrlMtvP57GyPxyPJedM0Kc6tCAB6vV7dBqfTabLd7/cPYJLWde3mGWNSwJI4wFRA8R3SM0cFAEP8dasAkEcFuAxtEhUAxaAzcoWiE5gKOA5tPhXsPDdRaWkCwtj3/QcVsLEz/g+BbgKAPF79pIINAOD4drslJedqAETkNg+dsC2x3L4DQEQu8UKOYVsZ+nwASikHwK8AtmWU3XoAtECFX64/A6DGE4ddEgn6syqgUf1yC8Mudc7NAZjxlAi5FHapc24GoBFuNyns3CW11tsBaEbn2Dznwvr6MiIidxIIuJfGOezohmHnTHw70OygX+OxC4bDXlVVtFyzAKiMq3XunSB1ziQAxbhhWOsxld4JUudMAmC8ckvM5DcqkA/8mOW+EdmLxIxfc7v5kQtljooDo9hLjns6/wNACF5ee4a//R4OiQAAAABJRU5ErkJggg==
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @updateURL    https://raw.githubusercontent.com/PolarisHenry/x-focus-mode/main/x-focus-mode.user.js
