@@ -9,10 +9,11 @@
 
 | 安装通道 | 链接 | 说明 |
 | :--- | :--- | :--- |
-| 🚀 **CDN 极速镜像 (推荐)** | [点击直接安装 (jsDelivr)](https://fastly.jsdelivr.net/gh/PolarisHenry/x-focus-mode@main/x-focus-mode.user.js) | 国内外全网极速直连，支持油猴后台自动无感更新 |
-| 🌐 **GitHub Raw 官方源** | [点击备选安装 (GitHub Raw)](https://raw.githubusercontent.com/PolarisHenry/x-focus-mode/main/x-focus-mode.user.js) | GitHub 原始源文件（需网络通畅） |
+| 🌐 **GitHub Raw 官方源** | [点击安装 / 更新 (GitHub Raw)](https://raw.githubusercontent.com/PolarisHenry/x-focus-mode/main/x-focus-mode.user.js) | 安装、更新检查和脚本下载均直接使用 GitHub Raw（需网络通畅） |
 
-> **说明**：只要安装过一次，后续仓库任何 `git push`（并在代码头部增加 `@version` 比如 `1.8.1`），油猴将在后台自动拉取并静默更新，**无需再手动复制粘贴代码**。
+> **旧版迁移**：新版发布后，已使用 jsDelivr 更新源的用户，请点击上方 GitHub Raw 链接覆盖安装一次，将脚本的更新地址切换到 GitHub Raw。
+>
+> **后续更新**：发布时递增脚本头部的 `@version` 并推送代码，油猴会按更新检查设置从 GitHub Raw 获取新版本。
 
 ---
 
@@ -80,7 +81,7 @@
    git commit -m "feat: 你的新特性说明"
    git push origin main
    ```
-4. **自动更新**：Tampermonkey 检测到远端版本号更新后，会自动静默下载并替换，免去任何手动操作。
+4. **自动更新**：Tampermonkey 按更新检查设置，从 GitHub Raw 检查版本并下载更新。
 
 ---
 

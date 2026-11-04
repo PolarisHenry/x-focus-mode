@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         X (Twitter) 专注阅读模式
 // @namespace    https://github.com/PolarisHenry/x-focus-mode
-// @version      1.8.14
+// @version      1.8.16
 // @description  X (Twitter) 沉浸专注与摸鱼神器：一键隐藏杂栏、Spotlight 极简搜索、纯净圆形悬浮球(默认停靠 S 左侧，修复点击展开后无法点击收起的交互Bug)、全新紧凑多Tab设置面板(彻底告别超长界面)、强力清剿政治暴论/反动口水战/币圈推广/黄推低俗/性病营销、随机跨领域通识专栏、一键批量同步全量垃圾词到Twitter官方屏蔽库、单键 J/K 顺滑翻页。
 // @author       PolarisHenry
 // @match        https://x.com/*
 // @match        https://twitter.com/*
-// @updateURL    https://fastly.jsdelivr.net/gh/PolarisHenry/x-focus-mode@main/x-focus-mode.user.js
-// @downloadURL  https://fastly.jsdelivr.net/gh/PolarisHenry/x-focus-mode@main/x-focus-mode.user.js
+// @updateURL    https://raw.githubusercontent.com/PolarisHenry/x-focus-mode/main/x-focus-mode.user.js
+// @downloadURL  https://raw.githubusercontent.com/PolarisHenry/x-focus-mode/main/x-focus-mode.user.js
 // @homepageURL  https://github.com/PolarisHenry/x-focus-mode
 // @supportURL   https://github.com/PolarisHenry/x-focus-mode/issues
 // @grant        GM_getValue
@@ -183,11 +183,11 @@
   /* 隐藏右下角发推悬浮大圆钮 */
   body.fx-wide a[data-testid="FloatingActionButton"],
   body.fx-hide-right a[data-testid="FloatingActionButton"] { display: none !important; }
-  /* 隐藏信息流夹缝中的推荐关注模块 (Who to follow / Connect) */
-  body.fx-wide div[data-testid="cellInnerDiv"]:has(aside[role="complementary"]) { display: none !important; }
-  /* 隐藏 Premium 购买提示/订阅横幅/推荐升级插片 */
-  body.fx-wide div[data-testid="cellInnerDiv"]:has(a[href*="/i/premium_sign_up"]),
-  body.fx-wide div[data-testid="cellInnerDiv"]:has(a[href*="/i/verified-orgs-signup"]) { display: none !important; }
+  /* 只隐藏独立推荐模块，避免连带隐藏含有推荐/订阅链接的推文正文 */
+  body.fx-wide div[data-testid="cellInnerDiv"]:not(:has(article[data-testid="tweet"])):has(aside[role="complementary"]) { display: none !important; }
+  /* 隐藏独立的 Premium 购买提示/订阅横幅/推荐升级插片 */
+  body.fx-wide div[data-testid="cellInnerDiv"]:not(:has(article[data-testid="tweet"])):has(a[href*="/i/premium_sign_up"]),
+  body.fx-wide div[data-testid="cellInnerDiv"]:not(:has(article[data-testid="tweet"])):has(a[href*="/i/verified-orgs-signup"]) { display: none !important; }
 
   /* ============ 屏幕顶部极细阅读进度条 ============ */
   #fx-progress {
@@ -924,16 +924,38 @@
   }
 
   /* ---------------- 时间线本地高能主题与垃圾过滤 (币圈/政治/暴论/黄推/低俗) ---------------- */
+  function getStatusId(pathname) {
+    const match = pathname.match(/^\/(?:[^/]+\/status|i\/web\/status)\/(\d+)(?:\/|$)/);
+    return match ? match[1] : null;
+  }
+
+  function isCurrentTweet(el, statusId) {
+    if (!statusId) return false;
+    // 用推文本身的时间戳链接核对 ID，不能把引用卡片或正文里的链接当作主推文。
+    return Array.from(el.querySelectorAll('a[href*="/status/"]')).some((link) => {
+      if (!link.querySelector('time') ||
+          link.closest('article[data-testid="tweet"]') !== el ||
+          link.parentElement.closest('[role="link"], [data-testid="quoteTweet"]')) return false;
+      return getStatusId(new URL(link.href, location.href).pathname) === statusId;
+    });
+  }
+
   function filterTimelineTweets() {
+    const currentStatusId = getStatusId(location.pathname);
     const shouldBlockCrypto = S.focus && S.blockCrypto;
     const shouldBlockPolitics = S.focus && S.blockPolitics;
     const shouldBlockNsfw = S.focus && S.blockNsfw;
     const shouldFilterTopic = S.focus && S.topicFilter;
 
     document.querySelectorAll('article[data-testid="tweet"]').forEach((el) => {
+      // 引用内容随外层推文一起判断，避免内层卡片覆盖整条推文的过滤状态。
+      if (el.parentElement.closest('article[data-testid="tweet"]')) return;
       const wrap = el.closest('div[data-testid="cellInnerDiv"]') || el;
 
-      if (!shouldBlockCrypto && !shouldBlockPolitics && !shouldBlockNsfw && !shouldFilterTopic) {
+      // 用户主动打开的主推文始终可读，包括“显示更多”展开后的全文。
+      // 同时清理 SPA 跳转/节点复用时残留的隐藏状态；回复和推荐推文继续正常过滤。
+      if (isCurrentTweet(el, currentStatusId) ||
+          (!shouldBlockCrypto && !shouldBlockPolitics && !shouldBlockNsfw && !shouldFilterTopic)) {
         if (wrap.dataset.fxFiltered) {
           wrap.style.display = '';
           delete wrap.dataset.fxFiltered;
